@@ -24,7 +24,11 @@ import {
   Scale,
   Send,
   X,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Copy,
+  Check,
+  Link,
+  Repeat2
 } from 'lucide-react';
 
 // --- Mock Data ---
@@ -44,7 +48,11 @@ const INITIAL_POSTS = [
     ratingCount: 1420,
     likes: 3500,
     dislikes: 45,
-    comments: 120,
+    commentsList: [
+      { id: 1, user: "SpaceNerd42", handle: "@spacenerd", avatar: "bg-indigo-500", content: "Wahnsinn! Die Größe ist kaum vorstellbar 🤯", timestamp: "1h", likes: 234 },
+      { id: 2, user: "PhysikProf", handle: "@prof_physik", avatar: "bg-amber-600", content: "Der Sturm wird tatsächlich kleiner - Ende des Jahrhunderts könnte er verschwunden sein.", timestamp: "45m", likes: 89 },
+      { id: 3, user: "AstroFan", handle: "@astro_fan", avatar: "bg-pink-500", content: "Kann man sowas auch auf der Erde haben?", timestamp: "30m", likes: 12 }
+    ],
     isCurator: true,
     timestamp: "2h",
     category: "education"
@@ -63,7 +71,10 @@ const INITIAL_POSTS = [
     ratingCount: 850,
     likes: 2100,
     dislikes: 120,
-    comments: 340,
+    commentsList: [
+      { id: 1, user: "KlimaAktiv", handle: "@klima_aktiv", avatar: "bg-green-600", content: "Endlich ein Schritt in die richtige Richtung!", timestamp: "3h", likes: 456 },
+      { id: 2, user: "Skeptiker99", handle: "@skeptiker", avatar: "bg-gray-600", content: "Die Umsetzung wird spannend.", timestamp: "2h", likes: 78 }
+    ],
     isCurator: false,
     timestamp: "4h",
     category: "news"
@@ -76,12 +87,14 @@ const INITIAL_POSTS = [
     content: "Boah Leute, mein Kaffee schmeckt heute irgendwie anders. Keine Ahnung warum lol. ☕️",
     mediaType: null,
     qScore: 12,
-    aScore: 10,
+    uScore: 10,
     uScoreReason: "Wenige Übereinstimmungen mit deinem Profil",
     ratingCount: 45,
     likes: 12,
     dislikes: 85,
-    comments: 5,
+    commentsList: [
+      { id: 1, user: "KaffeeKenner", handle: "@kaffeeguru", avatar: "bg-amber-800", content: "Vielleicht neue Bohnen?", timestamp: "8m", likes: 2 }
+    ],
     isCurator: false,
     timestamp: "10m",
     category: "entertainment"
@@ -100,10 +113,145 @@ const INITIAL_POSTS = [
     ratingCount: 300,
     likes: 890,
     dislikes: 12,
-    comments: 56,
+    commentsList: [
+      { id: 1, user: "VRGamer", handle: "@vr_gamer", avatar: "bg-violet-500", content: "Welches Modell genau? Überlege auch gerade zu kaufen.", timestamp: "45m", likes: 34 },
+      { id: 2, user: "TechFan2024", handle: "@techfan", avatar: "bg-cyan-500", content: "Danke für den ehrlichen Test! 👍", timestamp: "30m", likes: 56 }
+    ],
     isCurator: true,
     timestamp: "1h",
     category: "tech"
+  },
+  {
+    id: 5,
+    user: "Dr. Wellness",
+    handle: "@dr_wellness",
+    avatar: "bg-teal-500",
+    content: "Studie aus Harvard zeigt: Schon 20 Minuten Spaziergang täglich senkt das Risiko für Herzkrankheiten um 31%. Kleine Gewohnheiten, große Wirkung! 🏃‍♀️💚",
+    mediaType: "image",
+    mediaContent: "walking-health",
+    qScore: 85,
+    uScore: 72,
+    uScoreReason: "Basierend auf deinen Gesundheits-Interessen",
+    ratingCount: 520,
+    likes: 1850,
+    dislikes: 23,
+    commentsList: [
+      { id: 1, user: "FitnessMom", handle: "@fitness_mom", avatar: "bg-pink-500", content: "Mache seit 3 Monaten täglich 30min - fühle mich so viel besser!", timestamp: "2h", likes: 145 },
+      { id: 2, user: "MedStudent", handle: "@med_student", avatar: "bg-blue-600", content: "Die Quelle zur Studie wäre super! Klingt sehr interessant.", timestamp: "1h", likes: 67 }
+    ],
+    isCurator: true,
+    timestamp: "3h",
+    category: "education"
+  },
+  {
+    id: 6,
+    user: "HistoryGeek",
+    handle: "@history_buff",
+    avatar: "bg-amber-700",
+    content: "Heute vor 80 Jahren: Die erste programmierbare elektronische Rechenmaschine 'Colossus' wurde in Bletchley Park in Betrieb genommen. Der Grundstein für das digitale Zeitalter! 🖥️📜",
+    mediaType: "image",
+    mediaContent: "colossus-computer",
+    qScore: 94,
+    uScore: 65,
+    uScoreReason: "Trending in #Geschichte",
+    ratingCount: 780,
+    likes: 2340,
+    dislikes: 8,
+    commentsList: [
+      { id: 1, user: "CompScience", handle: "@comp_sci", avatar: "bg-indigo-600", content: "Alan Turings Beitrag war revolutionär!", timestamp: "4h", likes: 234 },
+      { id: 2, user: "RetroTech", handle: "@retro_tech", avatar: "bg-orange-600", content: "Von Colossus zum Smartphone - was für eine Reise!", timestamp: "3h", likes: 189 }
+    ],
+    isCurator: true,
+    timestamp: "5h",
+    category: "education"
+  },
+  {
+    id: 7,
+    user: "KochKunst",
+    handle: "@kochkunst_de",
+    avatar: "bg-orange-500",
+    content: "Geheimtipp für perfekte Pasta: Das Kochwasser sollte so salzig wie das Mittelmeer sein! 🍝 Etwa 10g Salz pro Liter. Der Geschmacksunterschied ist enorm.",
+    mediaType: "video",
+    mediaContent: "pasta-cooking",
+    qScore: 71,
+    uScore: 58,
+    uScoreReason: "Ähnlich zu deinen Food-Interaktionen",
+    ratingCount: 290,
+    likes: 980,
+    dislikes: 45,
+    commentsList: [
+      { id: 1, user: "ItalienFan", handle: "@italia_fan", avatar: "bg-green-600", content: "Meine Nonna macht das schon immer so! 🇮🇹", timestamp: "1h", likes: 89 },
+      { id: 2, user: "HomeCook", handle: "@home_cook", avatar: "bg-red-500", content: "Hab's ausprobiert - Gamechanger!", timestamp: "45m", likes: 34 }
+    ],
+    isCurator: false,
+    timestamp: "6h",
+    category: "entertainment"
+  },
+  {
+    id: 8,
+    user: "BioForschung",
+    handle: "@bio_research",
+    avatar: "bg-lime-600",
+    content: "Durchbruch in der Stammzellenforschung: Forscher aus Kyoto haben eine neue Methode entwickelt, die das Risiko von Tumorbildung bei der Therapie drastisch reduziert. Peer-reviewed in Nature. 🔬",
+    mediaType: null,
+    qScore: 96,
+    uScore: 41,
+    uScoreReason: "Top Q-Score in #Wissenschaft",
+    ratingCount: 1120,
+    likes: 4200,
+    dislikes: 15,
+    commentsList: [
+      { id: 1, user: "Dr.BioTech", handle: "@dr_biotech", avatar: "bg-emerald-600", content: "Das könnte die Transplantationsmedizin revolutionieren!", timestamp: "30m", likes: 567 },
+      { id: 2, user: "Pharma_Inside", handle: "@pharma_insider", avatar: "bg-blue-500", content: "Bin gespannt auf die klinischen Trials.", timestamp: "20m", likes: 234 },
+      { id: 3, user: "MediNews", handle: "@medi_news", avatar: "bg-red-600", content: "Hier der Link zur Originalstudie: doi.org/...", timestamp: "15m", likes: 445 }
+    ],
+    isCurator: true,
+    timestamp: "1h",
+    category: "education"
+  },
+  {
+    id: 9,
+    user: "LokalNews Berlin",
+    handle: "@lokal_berlin",
+    avatar: "bg-yellow-500",
+    content: "🚇 BVG Update: U2 zwischen Gleisdreieck und Potsdamer Platz ab morgen für 3 Wochen gesperrt. Ersatzbusse fahren im 5-Minuten-Takt. Alle Infos hier:",
+    mediaType: null,
+    qScore: 67,
+    uScore: 92,
+    uScoreReason: "Du bist in Berlin",
+    ratingCount: 180,
+    likes: 340,
+    dislikes: 12,
+    commentsList: [
+      { id: 1, user: "BerlinPendler", handle: "@pendler_berlin", avatar: "bg-gray-500", content: "Nicht schon wieder 😩", timestamp: "10m", likes: 78 },
+      { id: 2, user: "U2Fan", handle: "@u2_nutzer", avatar: "bg-yellow-600", content: "Wenigstens fahren diesmal Ersatzbusse!", timestamp: "5m", likes: 23 }
+    ],
+    isCurator: false,
+    timestamp: "30m",
+    category: "news"
+  },
+  {
+    id: 10,
+    user: "MusicVibes",
+    handle: "@music_vibes",
+    avatar: "bg-fuchsia-500",
+    content: "Unpopular Opinion: Vinyl-Platten klingen nicht 'wärmer' - der Unterschied ist psychoakustisch. Aber das Ritual des Auflegens macht einfach Spaß! 🎵💿",
+    mediaType: "image",
+    mediaContent: "vinyl-setup",
+    qScore: 54,
+    uScore: 78,
+    uScoreReason: "Du interagierst mit Musik-Content",
+    ratingCount: 420,
+    likes: 1200,
+    dislikes: 380,
+    commentsList: [
+      { id: 1, user: "VinylCollector", handle: "@vinyl_collector", avatar: "bg-purple-600", content: "Finally, jemand sagt es! Es geht ums Erlebnis.", timestamp: "2h", likes: 156 },
+      { id: 2, user: "AudioPhile", handle: "@audio_phil", avatar: "bg-gray-700", content: "Kommt auf die Anlage an - da gibt es schon Unterschiede.", timestamp: "1h", likes: 89 },
+      { id: 3, user: "RetroMusic", handle: "@retro_musik", avatar: "bg-pink-600", content: "Die Cover-Art allein ist es wert! 🎨", timestamp: "45m", likes: 67 }
+    ],
+    isCurator: false,
+    timestamp: "4h",
+    category: "entertainment"
   }
 ];
 
@@ -159,13 +307,22 @@ const MediaPlaceholder = ({ type, content }) => {
   );
 };
 
-const Post = ({ post, onRate, onVote, showUScore }) => {
+const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
   const [isRating, setIsRating] = useState(false);
   const [sliderValue, setSliderValue] = useState(50);
   const [hasRated, setHasRated] = useState(false);
   const [voteStatus, setVoteStatus] = useState(null);
   const [likes, setLikes] = useState(post.likes);
   const [dislikes, setDislikes] = useState(post.dislikes);
+
+  // Comments State
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [comments, setComments] = useState(post.commentsList || []);
+
+  // Share State
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const handleRateSubmit = () => {
     onRate(post.id, sliderValue);
@@ -187,6 +344,37 @@ const Post = ({ post, onRate, onVote, showUScore }) => {
       else setDislikes(d => d + 1);
 
       onVote(post.id, type);
+    }
+  };
+
+  const handleAddComment = () => {
+    if (!commentText.trim()) return;
+
+    const newComment = {
+      id: Date.now(),
+      user: "Du",
+      handle: "@current_user",
+      avatar: "bg-indigo-500",
+      content: commentText,
+      timestamp: "Gerade eben",
+      likes: 0
+    };
+
+    setComments([...comments, newComment]);
+    setCommentText("");
+    if (onAddComment) onAddComment(post.id, newComment);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`https://q-rate.app/post/${post.id}`);
+      setCopiedLink(true);
+      setTimeout(() => {
+        setCopiedLink(false);
+        setShowShareMenu(false);
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
     }
   };
 
@@ -269,17 +457,21 @@ const Post = ({ post, onRate, onVote, showUScore }) => {
               </button>
             </div>
 
-            <button className="flex items-center gap-2 text-gray-500 hover:text-blue-400 transition-colors">
-              <MessageCircle size={18} />
-              <span className="text-sm">{post.comments}</span>
+            {/* Comments Button */}
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className={`flex items-center gap-2 transition-colors ${showComments ? 'text-blue-400' : 'text-gray-500 hover:text-blue-400'}`}
+            >
+              <MessageCircle size={18} fill={showComments ? "currentColor" : "none"} />
+              <span className="text-sm">{comments.length}</span>
             </button>
 
             <div className="relative">
               <button
                 onClick={() => !hasRated && setIsRating(!isRating)}
                 className={`flex items-center gap-2 px-4 py-1.5 rounded-full border transition-all ${hasRated
-                    ? "border-emerald-500/50 text-emerald-400 bg-emerald-500/10 cursor-default"
-                    : "border-gray-600 hover:border-emerald-400 hover:text-emerald-400 hover:bg-emerald-500/5"
+                  ? "border-emerald-500/50 text-emerald-400 bg-emerald-500/10 cursor-default"
+                  : "border-gray-600 hover:border-emerald-400 hover:text-emerald-400 hover:bg-emerald-500/5"
                   }`}
               >
                 <TrendingUp size={16} />
@@ -314,10 +506,120 @@ const Post = ({ post, onRate, onVote, showUScore }) => {
               )}
             </div>
 
-            <button className="text-gray-500 hover:text-white transition-colors">
-              <Share2 size={18} />
-            </button>
+            {/* Share Button with Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                className={`text-gray-500 hover:text-white transition-colors p-1.5 rounded-full ${showShareMenu ? 'bg-gray-800 text-white' : ''}`}
+              >
+                <Share2 size={18} />
+              </button>
+
+              {showShareMenu && (
+                <div className="absolute bottom-10 right-0 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl z-20 w-52 animate-in fade-in zoom-in duration-200 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-700">
+                    <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Teilen</span>
+                  </div>
+
+                  <button
+                    onClick={handleCopyLink}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-700/50 transition-colors text-left"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check size={18} className="text-emerald-400" />
+                        <span className="text-emerald-400 font-medium">Link kopiert!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link size={18} className="text-gray-400" />
+                        <span className="text-gray-200">Link kopieren</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowShareMenu(false);
+                      // Future: Open repost modal
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-700/50 transition-colors text-left"
+                  >
+                    <Repeat2 size={18} className="text-gray-400" />
+                    <span className="text-gray-200">Auf Q-Rate teilen</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowShareMenu(false)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-700/50 transition-colors text-left border-t border-gray-700"
+                  >
+                    <Copy size={18} className="text-gray-400" />
+                    <span className="text-gray-200">Post kopieren</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Comments Section */}
+          {showComments && (
+            <div className="mt-4 pt-4 border-t border-gray-800 animate-in slide-in-from-top-2 duration-300">
+              {/* Comment Input */}
+              <div className="flex gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-indigo-500 flex-shrink-0 flex items-center justify-center text-xs font-bold">Du</div>
+                <div className="flex-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                    placeholder="Kommentar schreiben..."
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-full px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                  <button
+                    onClick={handleAddComment}
+                    disabled={!commentText.trim()}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${commentText.trim()
+                      ? 'bg-blue-500 text-white hover:bg-blue-400'
+                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                      }`}
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Comments List */}
+              <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
+                {comments.length === 0 ? (
+                  <p className="text-gray-500 text-sm text-center py-4">Noch keine Kommentare. Sei der Erste!</p>
+                ) : (
+                  comments.map((comment) => (
+                    <div key={comment.id} className="flex gap-3 group">
+                      <div className={`w-8 h-8 rounded-full flex-shrink-0 ${comment.avatar}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-semibold text-white text-sm">{comment.user}</span>
+                          <span className="text-gray-500 text-xs">{comment.handle}</span>
+                          <span className="text-gray-600 text-xs">· {comment.timestamp}</span>
+                        </div>
+                        <p className="text-gray-300 text-sm leading-relaxed">{comment.content}</p>
+                        <div className="flex items-center gap-4 mt-1.5">
+                          <button className="flex items-center gap-1 text-gray-500 hover:text-green-400 transition-colors text-xs">
+                            <ThumbsUp size={12} />
+                            <span>{comment.likes}</span>
+                          </button>
+                          <button className="text-gray-500 hover:text-blue-400 transition-colors text-xs">
+                            Antworten
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -514,8 +816,8 @@ export default function QRateApp() {
                       key={preset.id}
                       onClick={() => applyPreset(preset)}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activePreset === preset.id
-                          ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:border-gray-500'
+                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:border-gray-500'
                         }`}
                     >
                       {preset.icon}
@@ -583,8 +885,8 @@ export default function QRateApp() {
                     onClick={handlePostSubmit}
                     disabled={!postText.trim()}
                     className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold transition-all ${postText.trim()
-                        ? 'bg-emerald-500 text-black hover:bg-emerald-400'
-                        : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                      ? 'bg-emerald-500 text-black hover:bg-emerald-400'
+                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
                       }`}
                   >
                     <span>Posten</span>
@@ -602,6 +904,13 @@ export default function QRateApp() {
                   post={post}
                   onRate={handleRate}
                   onVote={handleVote}
+                  onAddComment={(postId, comment) => {
+                    setPosts(posts.map(p =>
+                      p.id === postId
+                        ? { ...p, commentsList: [...(p.commentsList || []), comment] }
+                        : p
+                    ));
+                  }}
                   showUScore={dataCollectionEnabled}
                 />
               ))
