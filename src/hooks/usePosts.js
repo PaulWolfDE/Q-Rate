@@ -3,11 +3,38 @@ import { supabase } from '../lib/supabase';
 
 /**
  * Hook für Posts-Management mit Supabase
+ * Inkl. User-spezifische Vote-Persistenz
  */
-export function usePosts() {
+export function usePosts(userId) {
     const [posts, setPosts] = useState([]);
+    const [userVotes, setUserVotes] = useState({}); // { postId: 'like' | 'dislike' | null }
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // User Votes laden
+    const fetchUserVotes = useCallback(async () => {
+        if (!userId) {
+            setUserVotes({});
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('reactions')
+                .select('post_id, type')
+                .eq('user_id', userId);
+
+            if (error) throw error;
+
+            const votesMap = {};
+            data.forEach(reaction => {
+                votesMap[reaction.post_id] = reaction.type;
+            });
+            setUserVotes(votesMap);
+        } catch (err) {
+            console.error('User Votes laden fehlgeschlagen:', err);
+        }
+    }, [userId]);
 
     // Posts laden
     const fetchPosts = useCallback(async () => {
@@ -58,6 +85,11 @@ export function usePosts() {
         fetchPosts();
     }, [fetchPosts]);
 
+    // User Votes laden wenn userId sich ändert
+    useEffect(() => {
+        fetchUserVotes();
+    }, [fetchUserVotes]);
+
     // Post erstellen
     const createPost = async (postData) => {
         try {
@@ -72,7 +104,8 @@ export function usePosts() {
                     media_content: postData.mediaContent || null,
                     q_score: postData.qScore || 50,
                     is_curator: postData.isCurator || false,
-                    category: postData.category || 'general'
+                    category: postData.category || 'general',
+                    user_id: userId || null
                 }])
                 .select()
                 .single();
@@ -114,28 +147,88 @@ export function usePosts() {
         }
     };
 
-    // Upvote/Downvote
+    // Upvote/Downvote mit Persistenz
     const votePost = async (postId, type) => {
+        if (!userId) {
+            console.warn('Benutzer muss eingeloggt sein um zu voten');
+            return { success: false, requiresAuth: true };
+        }
+
         try {
+            const currentVote = userVotes[postId];
             const currentPost = posts.find(p => p.id === postId);
-            if (!currentPost) return;
+            if (!currentPost) return { success: false };
 
-            const updateData = type === 'up'
-                ? { upvotes: currentPost.upvotes + 1 }
-                : { downvotes: currentPost.downvotes + 1 };
+            let newVote = type;
+            let upvoteDelta = 0;
+            let downvoteDelta = 0;
 
-            const { error } = await supabase
+            // Toggle-Logik: Wenn gleicher Vote erneut geklickt, entfernen
+            if (currentVote === type) {
+                newVote = null;
+                if (type === 'like') upvoteDelta = -1;
+                else downvoteDelta = -1;
+
+                // Vote aus DB entfernen
+                await supabase
+                    .from('reactions')
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('post_id', postId);
+            } else {
+                // Vorherigen Vote rückgängig machen
+                if (currentVote === 'like') upvoteDelta = -1;
+                if (currentVote === 'dislike') downvoteDelta = -1;
+
+                // Neuen Vote hinzufügen
+                if (type === 'like') upvoteDelta += 1;
+                else downvoteDelta += 1;
+
+                // Upsert in reactions Tabelle
+                const { error: upsertError } = await supabase
+                    .from('reactions')
+                    .upsert({
+                        user_id: userId,
+                        post_id: postId,
+                        type: type
+                    }, {
+                        onConflict: 'user_id,post_id'
+                    });
+
+                if (upsertError) throw upsertError;
+            }
+
+            // Post-Zähler in DB aktualisieren
+            const { error: updateError } = await supabase
                 .from('posts')
-                .update(updateData)
+                .update({
+                    upvotes: currentPost.likes + upvoteDelta,
+                    downvotes: currentPost.dislikes + downvoteDelta
+                })
                 .eq('id', postId);
 
-            if (error) throw error;
+            if (updateError) throw updateError;
+
+            // Lokalen State aktualisieren
+            setUserVotes(prev => ({
+                ...prev,
+                [postId]: newVote
+            }));
 
             setPosts(prev => prev.map(p =>
-                p.id === postId ? { ...p, ...updateData } : p
+                p.id === postId
+                    ? {
+                        ...p,
+                        likes: p.likes + upvoteDelta,
+                        dislikes: p.dislikes + downvoteDelta
+                    }
+                    : p
             ));
+
+            return { success: true };
         } catch (err) {
             console.error('Vote fehlgeschlagen:', err);
+            return { success: false, error: err.message };
         }
     };
 
@@ -149,7 +242,8 @@ export function usePosts() {
                     user_name: commentData.user,
                     handle: commentData.handle,
                     avatar: commentData.avatar,
-                    content: commentData.content
+                    content: commentData.content,
+                    user_id: userId || null
                 }])
                 .select()
                 .single();
@@ -171,6 +265,7 @@ export function usePosts() {
 
     return {
         posts,
+        userVotes,
         loading,
         error,
         fetchPosts,

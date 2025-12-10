@@ -313,13 +313,12 @@ const MediaPlaceholder = ({ type, content }) => {
   );
 };
 
-const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
+const Post = ({ post, onRate, onVote, onAddComment, showUScore, userVote, profile, isAuthenticated, onAuthRequired }) => {
   const [isRating, setIsRating] = useState(false);
   const [sliderValue, setSliderValue] = useState(50);
   const [hasRated, setHasRated] = useState(false);
-  const [voteStatus, setVoteStatus] = useState(null);
-  const [likes, setLikes] = useState(post.likes);
-  const [dislikes, setDislikes] = useState(post.dislikes);
+  // Use external vote state from userVotes
+  const [localVoteStatus, setLocalVoteStatus] = useState(userVote || null);
 
   // Comments State
   const [showComments, setShowComments] = useState(false);
@@ -337,30 +336,26 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
   };
 
   const handleVote = (type) => {
-    if (voteStatus === type) {
-      setVoteStatus(null);
-      if (type === 'like') setLikes(l => l - 1);
-      else setDislikes(d => d - 1);
-    } else {
-      if (voteStatus === 'like') setLikes(l => l - 1);
-      if (voteStatus === 'dislike') setDislikes(d => d - 1);
-
-      setVoteStatus(type);
-      if (type === 'like') setLikes(l => l + 1);
-      else setDislikes(d => d + 1);
-
-      onVote(post.id, type);
+    if (!isAuthenticated) {
+      if (onAuthRequired) onAuthRequired();
+      return;
     }
+    // Call parent handler which manages persistence
+    onVote(post.id, type);
   };
 
   const handleAddComment = () => {
     if (!commentText.trim()) return;
+    if (!isAuthenticated) {
+      if (onAuthRequired) onAuthRequired();
+      return;
+    }
 
     const newComment = {
       id: Date.now(),
-      user: "Du",
-      handle: "@current_user",
-      avatar: "bg-indigo-500",
+      user: profile?.username || "Anonym",
+      handle: profile?.handle || "@anonym",
+      avatar: profile?.avatar || "bg-gray-500",
       content: commentText,
       timestamp: "Gerade eben",
       likes: 0
@@ -448,18 +443,18 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
             <div className="flex items-center bg-gray-900/80 rounded-full px-1 border border-gray-800">
               <button
                 onClick={() => handleVote('like')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${voteStatus === 'like' ? 'text-green-400' : 'text-gray-500 hover:text-green-400'}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${userVote === 'like' ? 'text-green-400' : 'text-gray-500 hover:text-green-400'}`}
               >
-                <ThumbsUp size={18} fill={voteStatus === 'like' ? "currentColor" : "none"} />
-                <span className="text-sm font-medium">{likes}</span>
+                <ThumbsUp size={18} fill={userVote === 'like' ? "currentColor" : "none"} />
+                <span className="text-sm font-medium">{post.likes || 0}</span>
               </button>
               <div className="w-px h-4 bg-gray-700"></div>
               <button
                 onClick={() => handleVote('dislike')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${voteStatus === 'dislike' ? 'text-red-400' : 'text-gray-500 hover:text-red-400'}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${userVote === 'dislike' ? 'text-red-400' : 'text-gray-500 hover:text-red-400'}`}
               >
-                <ThumbsDown size={18} fill={voteStatus === 'dislike' ? "currentColor" : "none"} />
-                <span className="text-sm font-medium">{dislikes}</span>
+                <ThumbsDown size={18} fill={userVote === 'dislike' ? "currentColor" : "none"} />
+                <span className="text-sm font-medium">{post.dislikes || 0}</span>
               </button>
             </div>
 
@@ -637,16 +632,17 @@ export default function QRateApp() {
   const { user, profile, signUp, signIn, signOut, isAuthenticated, loading: authLoading } = useAuthContext();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Supabase Posts Hook
+  // Supabase Posts Hook - pass user ID for vote persistence
   const {
     posts,
+    userVotes,
     loading,
     error,
     createPost,
     ratePost,
     votePost,
     addComment
-  } = usePosts();
+  } = usePosts(user?.id);
 
   const [activeTab, setActiveTab] = useState('feed');
   const userAvgQScore = profile?.q_score || 50;
@@ -663,7 +659,32 @@ export default function QRateApp() {
   // Posting State
   const [postText, setPostText] = useState("");
 
-  const displayedPosts = posts.filter(p => p.qScore >= minQScore);
+  // Search State
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtered posts based on tab, search, and Q-Score
+  const getFilteredPosts = () => {
+    let filtered = posts.filter(p => p.qScore >= minQScore);
+
+    // Search filter for explore tab
+    if (activeTab === 'explore' && searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = posts.filter(p =>
+        p.content.toLowerCase().includes(query) ||
+        p.user.toLowerCase().includes(query) ||
+        p.handle.toLowerCase().includes(query)
+      );
+    }
+
+    // Q-Rator Hub: only curator posts
+    if (activeTab === 'qrator') {
+      filtered = posts.filter(p => p.isCurator);
+    }
+
+    return filtered;
+  };
+
+  const displayedPosts = getFilteredPosts();
 
   // Auth Handler
   const handleAuth = async (mode, email, password, username) => {
@@ -678,8 +699,12 @@ export default function QRateApp() {
     ratePost(id, newRating);
   };
 
-  const handleVote = (id, type) => {
-    votePost(id, type);
+  const handleVote = async (id, type) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    await votePost(id, type);
   };
 
   const handlePostSubmit = async () => {
@@ -796,17 +821,50 @@ export default function QRateApp() {
             < div className="sticky top-0 bg-black/95 backdrop-blur-md z-10 border-b border-gray-800" >
               {/* Header / Trigger */}
               < div className="flex justify-between items-center px-4 py-3" >
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                  <h2 className="text-xl font-bold">Home</h2>
-                  <span className="text-gray-500 text-sm">/</span>
-                  <span className="text-emerald-400 text-sm font-medium flex items-center gap-1">
-                    {FILTER_PRESETS.find(p => p.id === activePreset)?.label || 'Benutzerdefiniert'}
-                    <span className="text-xs bg-emerald-500/10 px-1 rounded border border-emerald-500/20">Q {minQScore}+</span>
-                  </span>
-                  <button className="ml-1 w-6 h-6 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors">
-                    {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                </div>
+                {/* Dynamic Header based on activeTab */}
+                {activeTab === 'feed' && (
+                  <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                    <h2 className="text-xl font-bold">Home</h2>
+                    <span className="text-gray-500 text-sm">/</span>
+                    <span className="text-emerald-400 text-sm font-medium flex items-center gap-1">
+                      {FILTER_PRESETS.find(p => p.id === activePreset)?.label || 'Benutzerdefiniert'}
+                      <span className="text-xs bg-emerald-500/10 px-1 rounded border border-emerald-500/20">Q {minQScore}+</span>
+                    </span>
+                    <button className="ml-1 w-6 h-6 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors">
+                      {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  </div>
+                )}
+
+                {activeTab === 'explore' && (
+                  <div className="flex-1 flex items-center gap-3">
+                    <h2 className="text-xl font-bold">Entdecken</h2>
+                    <div className="flex-1 max-w-md relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Posts, Nutzer oder Themen suchen..."
+                        className="w-full bg-gray-800 border border-gray-700 rounded-full pl-10 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'notif' && (
+                  <div className="flex items-center gap-2">
+                    <Bell className="text-emerald-400" size={20} />
+                    <h2 className="text-xl font-bold">Mitteilungen</h2>
+                  </div>
+                )}
+
+                {activeTab === 'qrator' && (
+                  <div className="flex items-center gap-2">
+                    <Hexagon className="text-emerald-400" size={20} fill="currentColor" />
+                    <h2 className="text-xl font-bold">Q-Rator Hub</h2>
+                  </div>
+                )}
 
                 {/* Settings Toggle (Always Visible) */}
                 <div className="relative">
@@ -848,9 +906,9 @@ export default function QRateApp() {
                 </div>
               </div >
 
-              {/* Collapsible Content */}
+              {/* Collapsible Content - only show for feed tab */}
               {
-                isFilterOpen && (
+                activeTab === 'feed' && isFilterOpen && (
                   <div className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200 border-t border-gray-800/50 pt-2">
                     <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide">
                       {FILTER_PRESETS.map(preset => (
@@ -898,61 +956,146 @@ export default function QRateApp() {
             {/* Feed Content */}
             < div className="flex-1 overflow-y-auto custom-scrollbar" >
 
-              {/* Post Input Area */}
-              < div className="p-4 border-b border-gray-800 flex gap-4 bg-black/50" >
-                <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white text-sm ${isAuthenticated && profile ? profile.avatar : 'bg-gray-600'}`}>
-                  {isAuthenticated && profile ? profile.username?.charAt(0).toUpperCase() : '?'}
-                </div>
-                <div className="flex-1">
-                  {/* User Status Badge inline */}
-                  <div className="flex items-center gap-2 mb-2">
-                    {isAuthenticated && profile ? (
-                      <>
-                        <span className="text-xs text-gray-400 font-medium">{profile.username}</span>
-                        <div className="flex items-center gap-1 bg-gray-900 px-2 py-0.5 rounded border border-gray-800">
-                          <div className={`w-2 h-2 rounded-full ${userAvgQScore >= 70 ? 'bg-emerald-500' : 'bg-yellow-500'}`}></div>
-                          <span className={`text-xs font-mono font-bold ${userAvgQScore >= 70 ? 'text-emerald-400' : 'text-yellow-400'}`}>Q-Score: {userAvgQScore}</span>
-                        </div>
-                      </>
-                    ) : (
+              {/* Post Input Area - only for feed tab */}
+              {activeTab === 'feed' && (
+                < div className="p-4 border-b border-gray-800 flex gap-4 bg-black/50" >
+                  <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white text-sm ${isAuthenticated && profile ? profile.avatar : 'bg-gray-600'}`}>
+                    {isAuthenticated && profile ? profile.username?.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <div className="flex-1">
+                    {/* User Status Badge inline */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {isAuthenticated && profile ? (
+                        <>
+                          <span className="text-xs text-gray-400 font-medium">{profile.username}</span>
+                          <div className="flex items-center gap-1 bg-gray-900 px-2 py-0.5 rounded border border-gray-800">
+                            <div className={`w-2 h-2 rounded-full ${userAvgQScore >= 70 ? 'bg-emerald-500' : 'bg-yellow-500'}`}></div>
+                            <span className={`text-xs font-mono font-bold ${userAvgQScore >= 70 ? 'text-emerald-400' : 'text-yellow-400'}`}>Q-Score: {userAvgQScore}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setShowAuthModal(true)}
+                          className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                        >
+                          <LogIn size={12} />
+                          <span>Anmelden zum Posten</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <textarea
+                      value={postText}
+                      onChange={(e) => setPostText(e.target.value)}
+                      placeholder="Teile Wissen, keine Gerüchte..."
+                      className="w-full bg-transparent border-none focus:ring-0 text-lg placeholder-gray-600 text-white resize-none h-20 p-0"
+                    />
+                    <div className="flex justify-between items-center mt-2 border-t border-gray-800/50 pt-2">
+                      <div className="flex gap-2">
+                        <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><ImageIcon size={20} /></button>
+                        <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><PlayCircle size={20} /></button>
+                      </div>
+                      <button
+                        onClick={handlePostSubmit}
+                        disabled={!postText.trim()}
+                        className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold transition-all ${postText.trim()
+                          ? 'bg-emerald-500 text-black hover:bg-emerald-400'
+                          : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                          }`}
+                      >
+                        <span>Posten</span>
+                        <Send size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div >
+              )}
+
+              {/* Notifications Tab Content */}
+              {activeTab === 'notif' && (
+                <div className="p-8 text-center">
+                  {isAuthenticated ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                        <Bell size={40} className="text-gray-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">Keine neuen Mitteilungen</h3>
+                      <p className="text-gray-500 max-w-sm">
+                        Wenn jemand auf deine Posts reagiert oder dir folgt, erscheint es hier.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                        <Bell size={40} className="text-gray-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">Melde dich an</h3>
+                      <p className="text-gray-500 max-w-sm mb-4">
+                        Um Mitteilungen zu erhalten, musst du angemeldet sein.
+                      </p>
                       <button
                         onClick={() => setShowAuthModal(true)}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2 px-6 rounded-full transition-colors"
                       >
-                        <LogIn size={12} />
-                        <span>Anmelden zum Posten</span>
+                        Jetzt anmelden
                       </button>
-                    )}
-                  </div>
-
-                  <textarea
-                    value={postText}
-                    onChange={(e) => setPostText(e.target.value)}
-                    placeholder="Teile Wissen, keine Gerüchte..."
-                    className="w-full bg-transparent border-none focus:ring-0 text-lg placeholder-gray-600 text-white resize-none h-20 p-0"
-                  />
-                  <div className="flex justify-between items-center mt-2 border-t border-gray-800/50 pt-2">
-                    <div className="flex gap-2">
-                      <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><ImageIcon size={20} /></button>
-                      <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><PlayCircle size={20} /></button>
                     </div>
-                    <button
-                      onClick={handlePostSubmit}
-                      disabled={!postText.trim()}
-                      className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold transition-all ${postText.trim()
-                        ? 'bg-emerald-500 text-black hover:bg-emerald-400'
-                        : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                        }`}
-                    >
-                      <span>Posten</span>
-                      <Send size={14} />
-                    </button>
-                  </div>
+                  )}
                 </div>
-              </div >
+              )}
 
-              {/* Posts List */}
-              {
+              {/* Q-Rator Hub Tab Content */}
+              {activeTab === 'qrator' && (
+                <div className="p-6">
+                  {/* Info Banner */}
+                  <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 rounded-xl p-6 mb-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Hexagon size={28} className="text-black" fill="currentColor" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-2">Was ist ein Q-Rator?</h3>
+                        <p className="text-gray-300 text-sm leading-relaxed">
+                          Q-Ratoren sind verifizierte Content-Ersteller, die für qualitativ hochwertige,
+                          faktisch korrekte Beiträge bekannt sind. Sie haben einen höheren Einfluss auf
+                          den Q-Score und helfen der Community, Qualität von Noise zu unterscheiden.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* How to become a Q-Rator */}
+                  <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 mb-6">
+                    <h4 className="font-bold text-white mb-3 flex items-center gap-2">
+                      <UserCheck size={18} className="text-emerald-400" />
+                      So wirst du Q-Rator
+                    </h4>
+                    <ul className="space-y-2 text-sm text-gray-400">
+                      <li className="flex items-start gap-2">
+                        <span className="text-emerald-400 font-bold">1.</span>
+                        <span>Poste regelmäßig qualitativ hochwertige Inhalte</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-emerald-400 font-bold">2.</span>
+                        <span>Erhalte konstant hohe Q-Scores (Ø 80+)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-emerald-400 font-bold">3.</span>
+                        <span>Werde von bestehenden Q-Ratoren empfohlen</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Q-Rator Posts */}
+                  <h4 className="font-bold text-white mb-4 flex items-center gap-2">
+                    <TrendingUp size={18} className="text-emerald-400" />
+                    Top Q-Rator Beiträge
+                  </h4>
+                </div>
+              )}
+
+              {/* Posts List - for feed, explore, and qrator tabs */}
+              {(activeTab === 'feed' || activeTab === 'explore' || activeTab === 'qrator') && (
                 loading ? (
                   <div className="p-12 text-center flex flex-col items-center">
                     <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -974,6 +1117,10 @@ export default function QRateApp() {
                         addComment(postId, comment);
                       }}
                       showUScore={dataCollectionEnabled}
+                      userVote={userVotes[post.id] || null}
+                      profile={profile}
+                      isAuthenticated={isAuthenticated}
+                      onAuthRequired={() => setShowAuthModal(true)}
                     />
                   ))
                 ) : (
@@ -989,7 +1136,7 @@ export default function QRateApp() {
                     </button>
                   </div>
                 )
-              }
+              )}
 
               {/* End of Feed */}
               {
