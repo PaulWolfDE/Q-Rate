@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { usePosts } from './hooks/usePosts';
 import {
   MessageCircle,
   Share2,
@@ -627,7 +628,17 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
 };
 
 export default function QRateApp() {
-  const [posts, setPosts] = useState(INITIAL_POSTS);
+  // Supabase Posts Hook
+  const {
+    posts,
+    loading,
+    error,
+    createPost,
+    ratePost,
+    votePost,
+    addComment
+  } = usePosts();
+
   const [activeTab, setActiveTab] = useState('feed');
   const [userAvgQScore, setUserAvgQScore] = useState(74); // User's own score
 
@@ -646,55 +657,29 @@ export default function QRateApp() {
   const displayedPosts = posts.filter(p => p.qScore >= minQScore);
 
   const handleRate = (id, newRating) => {
-    setPosts(posts.map(post => {
-      if (post.id !== id) return post;
-      const newScore = Math.round(((post.qScore * post.ratingCount) + newRating) / (post.ratingCount + 1));
-      return { ...post, qScore: newScore, ratingCount: post.ratingCount + 1 };
-    }));
+    ratePost(id, newRating);
   };
 
   const handleVote = (id, type) => {
-    setPosts(posts.map(post => {
-      if (post.id !== id) return post;
-
-      let scoreModifier = 0;
-      if (type === 'like') scoreModifier = 0.5;
-      if (type === 'dislike') scoreModifier = -1.5;
-
-      const newQ = Math.max(0, Math.min(100, post.qScore + scoreModifier));
-      const updates = {};
-      updates.qScore = Math.round(newQ);
-      if (type === 'like') updates.likes = post.likes + 1;
-      if (type === 'dislike') updates.dislikes = post.dislikes + 1;
-
-      return { ...post, ...updates };
-    }));
+    votePost(id, type);
   };
 
-  const handlePostSubmit = () => {
+  const handlePostSubmit = async () => {
     if (!postText.trim()) return;
 
-    const newPost = {
-      id: Date.now(),
+    const result = await createPost({
       user: "Du",
       handle: "@current_user",
       avatar: "bg-indigo-500",
       content: postText,
-      mediaType: null,
-      qScore: userAvgQScore, // Inherits user's reputation initially
-      uScore: 100, // Always relevant to self
-      uScoreReason: "Dein eigener Beitrag",
-      ratingCount: 0,
-      likes: 0,
-      dislikes: 0,
-      comments: 0,
+      qScore: userAvgQScore,
       isCurator: false,
-      timestamp: "Gerade eben",
       category: "general"
-    };
+    });
 
-    setPosts([newPost, ...posts]);
-    setPostText("");
+    if (result.success) {
+      setPostText("");
+    }
   };
 
   const applyPreset = (preset) => {
@@ -897,7 +882,17 @@ export default function QRateApp() {
             </div>
 
             {/* Posts List */}
-            {displayedPosts.length > 0 ? (
+            {loading ? (
+              <div className="p-12 text-center flex flex-col items-center">
+                <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-400">Posts werden geladen...</p>
+              </div>
+            ) : error ? (
+              <div className="p-12 text-center text-red-400 flex flex-col items-center">
+                <p className="text-lg font-medium">Fehler beim Laden</p>
+                <p className="text-sm max-w-xs mx-auto mt-2">{error}</p>
+              </div>
+            ) : displayedPosts.length > 0 ? (
               displayedPosts.map(post => (
                 <Post
                   key={post.id}
@@ -905,11 +900,7 @@ export default function QRateApp() {
                   onRate={handleRate}
                   onVote={handleVote}
                   onAddComment={(postId, comment) => {
-                    setPosts(posts.map(p =>
-                      p.id === postId
-                        ? { ...p, commentsList: [...(p.commentsList || []), comment] }
-                        : p
-                    ));
+                    addComment(postId, comment);
                   }}
                   showUScore={dataCollectionEnabled}
                 />
