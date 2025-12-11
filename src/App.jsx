@@ -1,7 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { usePosts } from './hooks/usePosts';
-import { useAuthContext } from './context/AuthContext';
-import { AuthModal } from './components/AuthModal';
+import React, { useState, useMemo } from 'react';
 import {
   MessageCircle,
   Share2,
@@ -32,9 +29,18 @@ import {
   Check,
   Link,
   Repeat2,
-  LogIn,
-  LogOut,
-  User as UserIcon
+  Heart,
+  AtSign,
+  UserPlus,
+  Award,
+  Star,
+  Target,
+  Zap,
+  Trophy,
+  BarChart3,
+  Users,
+  FileText,
+  Clock
 } from 'lucide-react';
 
 // --- Mock Data ---
@@ -268,6 +274,137 @@ const FILTER_PRESETS = [
   { id: 'education', label: 'Lehrreich', icon: <BookOpen size={14} />, minQ: 70 },
   { id: 'sourced', label: 'Belegt & Seriös', icon: <Scale size={14} />, minQ: 85 },
 ];
+
+// --- Mock Notifications ---
+const MOCK_NOTIFICATIONS = [
+  {
+    id: 1,
+    type: 'like',
+    user: 'SpaceNerd42',
+    avatar: 'bg-indigo-500',
+    content: 'hat deinen Post geliked',
+    postPreview: 'Der Jupiter-Sturm ist wirklich faszinierend...',
+    timestamp: '5m',
+    isRead: false
+  },
+  {
+    id: 2,
+    type: 'comment',
+    user: 'PhysikProf',
+    avatar: 'bg-amber-600',
+    content: 'hat kommentiert:',
+    commentText: 'Tolle Erklärung! Hast du Quellen dazu?',
+    timestamp: '15m',
+    isRead: false
+  },
+  {
+    id: 3,
+    type: 'follow',
+    user: 'TechReviewer',
+    avatar: 'bg-purple-600',
+    content: 'folgt dir jetzt',
+    timestamp: '1h',
+    isRead: false
+  },
+  {
+    id: 4,
+    type: 'mention',
+    user: 'KlimaAktiv',
+    avatar: 'bg-green-600',
+    content: 'hat dich erwähnt:',
+    mentionText: '@current_user hat eine interessante Perspektive dazu...',
+    timestamp: '2h',
+    isRead: true
+  },
+  {
+    id: 5,
+    type: 'like',
+    user: 'VinylCollector',
+    avatar: 'bg-purple-600',
+    content: 'hat deinen Post geliked',
+    postPreview: 'Musik ist mehr als nur Sound...',
+    timestamp: '3h',
+    isRead: true
+  },
+  {
+    id: 6,
+    type: 'comment',
+    user: 'MedStudent',
+    avatar: 'bg-blue-600',
+    content: 'hat kommentiert:',
+    commentText: 'Sehr informativ, danke fürs Teilen!',
+    timestamp: '4h',
+    isRead: true
+  },
+  {
+    id: 7,
+    type: 'achievement',
+    user: 'Q-Rate System',
+    avatar: 'bg-emerald-500',
+    content: 'Neues Achievement freigeschaltet:',
+    achievementName: 'Wissensträger',
+    achievementDesc: '10 Posts mit Q-Score > 80',
+    timestamp: '1d',
+    isRead: true
+  },
+  {
+    id: 8,
+    type: 'follow',
+    user: 'BioForschung',
+    avatar: 'bg-lime-600',
+    content: 'folgt dir jetzt',
+    timestamp: '1d',
+    isRead: true
+  }
+];
+
+// --- Trending Topics ---
+const TRENDING_TOPICS = [
+  { tag: '#KlimaGipfel2024', posts: 12400, qAvg: 87, category: 'news' },
+  { tag: '#SpaceFacts', posts: 8900, qAvg: 92, category: 'education' },
+  { tag: '#TechReview', posts: 6200, qAvg: 78, category: 'tech' },
+  { tag: '#Wissenschaft', posts: 15600, qAvg: 89, category: 'education' },
+  { tag: '#Gesundheit', posts: 4800, qAvg: 81, category: 'education' },
+  { tag: '#Gaming', posts: 22000, qAvg: 52, category: 'entertainment' }
+];
+
+// --- Explore Categories ---
+const EXPLORE_CATEGORIES = [
+  { id: 'all', label: 'Alle', icon: <Filter size={14} /> },
+  { id: 'education', label: 'Bildung', icon: <BookOpen size={14} /> },
+  { id: 'tech', label: 'Tech', icon: <Zap size={14} /> },
+  { id: 'news', label: 'News', icon: <FileText size={14} /> },
+  { id: 'entertainment', label: 'Unterhaltung', icon: <PartyPopper size={14} /> }
+];
+
+// --- User Profile Data ---
+const USER_PROFILE = {
+  name: 'Max Mustermann',
+  handle: '@current_user',
+  avatar: 'bg-indigo-500',
+  bio: 'Wissenschafts-Enthusiast | Tech-Lover | Immer neugierig 🔬✨',
+  level: 3,
+  levelName: 'Q-Rator',
+  xp: 2450,
+  xpToNext: 3000,
+  joinedDate: 'März 2024',
+  stats: {
+    posts: 47,
+    followers: 284,
+    following: 156,
+    avgQScore: 74
+  },
+  achievements: [
+    { id: 1, name: 'Erste Schritte', desc: 'Erster Post veröffentlicht', icon: '🚀', unlocked: true },
+    { id: 2, name: 'Qualitätsbewusst', desc: '10 Posts mit Q-Score > 70', icon: '⭐', unlocked: true },
+    { id: 3, name: 'Wissensträger', desc: '10 Posts mit Q-Score > 80', icon: '📚', unlocked: true },
+    { id: 4, name: 'Community Leader', desc: '100 Follower erreicht', icon: '👥', unlocked: true },
+    { id: 5, name: 'Fact Checker', desc: '50 Posts bewertet', icon: '✅', unlocked: true },
+    { id: 6, name: 'Elite Q-Rator', desc: 'Level 5 erreicht', icon: '💎', unlocked: false },
+    { id: 7, name: 'Influencer', desc: '1000 Follower erreicht', icon: '🌟', unlocked: false },
+    { id: 8, name: 'Perfectionist', desc: 'Post mit Q-Score 100', icon: '🏆', unlocked: false }
+  ]
+};
 
 // --- Sub-Components ---
 
@@ -627,6 +764,472 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore, userVote, profil
   );
 };
 
+// --- Explore Tab Component ---
+const ExploreTab = ({ posts, onRate, onVote, onAddComment, dataCollectionEnabled }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const filteredPosts = useMemo(() => {
+    return posts.filter(post => {
+      const matchesSearch = searchQuery === '' ||
+        post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.handle.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [posts, searchQuery, selectedCategory]);
+
+  return (
+    <div className="flex-1 overflow-y-auto custom-scrollbar">
+      {/* Search Header */}
+      <div className="sticky top-0 bg-black/95 backdrop-blur-md z-10 p-4 border-b border-gray-800">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Suche nach Posts, Nutzern oder Themen..."
+            className="w-full bg-gray-900 border border-gray-700 rounded-full pl-12 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {/* Category Filters */}
+        <div className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+          {EXPLORE_CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${selectedCategory === cat.id
+                ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:border-gray-500'
+                }`}
+            >
+              {cat.icon}
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Trending Section */}
+      {searchQuery === '' && (
+        <div className="p-4 border-b border-gray-800">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="text-emerald-400" size={20} />
+            Trending Topics
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {TRENDING_TOPICS.map((topic, i) => (
+              <button
+                key={i}
+                onClick={() => setSearchQuery(topic.tag)}
+                className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-800 rounded-xl hover:border-gray-700 transition-colors text-left group"
+              >
+                <div>
+                  <div className="text-emerald-400 font-mono text-sm mb-1">{topic.tag}</div>
+                  <div className="text-gray-500 text-xs">{topic.posts.toLocaleString()} Posts</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`text-xs font-bold px-2 py-1 rounded border ${topic.qAvg >= 80 ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' :
+                    topic.qAvg >= 60 ? 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10' :
+                      'text-red-400 border-red-500/30 bg-red-500/10'
+                    }`}>
+                    Ø {topic.qAvg}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Search Results */}
+      {searchQuery && (
+        <div className="px-4 py-3 bg-gray-900/50 border-b border-gray-800">
+          <span className="text-gray-400 text-sm">
+            {filteredPosts.length} Ergebnis{filteredPosts.length !== 1 ? 'se' : ''} für "{searchQuery}"
+          </span>
+        </div>
+      )}
+
+      {/* Posts */}
+      {filteredPosts.length > 0 ? (
+        filteredPosts.map(post => (
+          <Post
+            key={post.id}
+            post={post}
+            onRate={onRate}
+            onVote={onVote}
+            onAddComment={onAddComment}
+            showUScore={dataCollectionEnabled}
+          />
+        ))
+      ) : (
+        <div className="p-12 text-center text-gray-500 flex flex-col items-center">
+          <Search size={32} className="text-gray-700 mb-4" />
+          <p className="text-lg font-medium text-white">Keine Ergebnisse</p>
+          <p className="text-sm max-w-xs mx-auto mt-2">
+            Keine Posts gefunden für "{searchQuery}"
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Notifications Tab Component ---
+const NotificationsTab = () => {
+  const [filter, setFilter] = useState('all');
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const filteredNotifications = filter === 'all'
+    ? notifications
+    : notifications.filter(n => !n.isRead);
+
+  const markAsRead = (id) => {
+    setNotifications(notifications.map(n =>
+      n.id === id ? { ...n, isRead: true } : n
+    ));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'like': return <Heart size={16} className="text-pink-500" />;
+      case 'comment': return <MessageCircle size={16} className="text-blue-400" />;
+      case 'follow': return <UserPlus size={16} className="text-purple-400" />;
+      case 'mention': return <AtSign size={16} className="text-cyan-400" />;
+      case 'achievement': return <Award size={16} className="text-yellow-400" />;
+      default: return <Bell size={16} className="text-gray-400" />;
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto custom-scrollbar">
+      {/* Header */}
+      <div className="sticky top-0 bg-black/95 backdrop-blur-md z-10 border-b border-gray-800">
+        <div className="flex items-center justify-between p-4">
+          <h2 className="text-xl font-bold text-white">Mitteilungen</h2>
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="text-emerald-400 text-sm hover:underline"
+            >
+              Alle als gelesen markieren
+            </button>
+          )}
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-4 px-4 pb-3">
+          <button
+            onClick={() => setFilter('all')}
+            className={`pb-2 text-sm font-medium border-b-2 transition-colors ${filter === 'all'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-gray-400 hover:text-white'
+              }`}
+          >
+            Alle
+          </button>
+          <button
+            onClick={() => setFilter('unread')}
+            className={`pb-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${filter === 'unread'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-gray-400 hover:text-white'
+              }`}
+          >
+            Ungelesen
+            {unreadCount > 0 && (
+              <span className="bg-emerald-500 text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Notifications List */}
+      <div className="divide-y divide-gray-800">
+        {filteredNotifications.length > 0 ? (
+          filteredNotifications.map(notif => (
+            <div
+              key={notif.id}
+              onClick={() => markAsRead(notif.id)}
+              className={`p-4 flex gap-4 hover:bg-gray-900/50 transition-colors cursor-pointer ${!notif.isRead ? 'bg-emerald-500/5' : ''
+                }`}
+            >
+              {/* Avatar with type indicator */}
+              <div className="relative">
+                <div className={`w-12 h-12 rounded-full ${notif.avatar} flex items-center justify-center text-white font-bold`}>
+                  {notif.user.charAt(0)}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center border-2 border-gray-800">
+                  {getNotificationIcon(notif.type)}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold text-white">{notif.user}</span>
+                    <span className="text-gray-400 ml-2">{notif.content}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm whitespace-nowrap">{notif.timestamp}</span>
+                    {!notif.isRead && (
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional content based on type */}
+                {notif.type === 'comment' && notif.commentText && (
+                  <p className="text-gray-300 text-sm mt-1 line-clamp-2">"{notif.commentText}"</p>
+                )}
+                {notif.type === 'like' && notif.postPreview && (
+                  <p className="text-gray-500 text-sm mt-1 line-clamp-1">{notif.postPreview}</p>
+                )}
+                {notif.type === 'mention' && notif.mentionText && (
+                  <p className="text-gray-300 text-sm mt-1 line-clamp-2">"{notif.mentionText}"</p>
+                )}
+                {notif.type === 'achievement' && (
+                  <div className="mt-2 flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+                    <span className="text-2xl">{notif.achievementName === 'Wissensträger' ? '📚' : '🏆'}</span>
+                    <div>
+                      <div className="text-yellow-400 font-bold text-sm">{notif.achievementName}</div>
+                      <div className="text-gray-400 text-xs">{notif.achievementDesc}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-12 text-center text-gray-500 flex flex-col items-center">
+            <Bell size={32} className="text-gray-700 mb-4" />
+            <p className="text-lg font-medium text-white">Keine Mitteilungen</p>
+            <p className="text-sm max-w-xs mx-auto mt-2">
+              {filter === 'unread' ? 'Du hast alle Mitteilungen gelesen!' : 'Deine Mitteilungen erscheinen hier'}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- Q-Rator Hub Tab Component ---
+const QRatorHubTab = ({ posts, onRate, onVote, onAddComment, dataCollectionEnabled }) => {
+  const [activeSection, setActiveSection] = useState('overview');
+
+  const userPosts = posts.filter(p => p.handle === '@current_user');
+
+  const progressPercentage = (USER_PROFILE.xp / USER_PROFILE.xpToNext) * 100;
+
+  return (
+    <div className="flex-1 overflow-y-auto custom-scrollbar">
+      {/* Profile Header */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-900/20 p-6 border-b border-gray-800">
+        <div className="flex items-start gap-4">
+          {/* Avatar */}
+          <div className={`w-20 h-20 rounded-2xl ${USER_PROFILE.avatar} flex items-center justify-center text-3xl font-bold text-white shadow-xl`}>
+            {USER_PROFILE.name.charAt(0)}
+          </div>
+
+          {/* Info */}
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-2xl font-bold text-white">{USER_PROFILE.name}</h2>
+              <div className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30 text-xs font-bold">
+                <Hexagon size={12} fill="currentColor" />
+                Lvl {USER_PROFILE.level} {USER_PROFILE.levelName}
+              </div>
+            </div>
+            <p className="text-gray-500">{USER_PROFILE.handle}</p>
+            <p className="text-gray-300 mt-2">{USER_PROFILE.bio}</p>
+
+            {/* Level Progress */}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <span>Level {USER_PROFILE.level}</span>
+                <span>{USER_PROFILE.xp.toLocaleString()} / {USER_PROFILE.xpToNext.toLocaleString()} XP</span>
+              </div>
+              <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full transition-all duration-500"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-4 gap-4 mt-6">
+          {[
+            { label: 'Posts', value: USER_PROFILE.stats.posts, icon: <FileText size={18} /> },
+            { label: 'Follower', value: USER_PROFILE.stats.followers, icon: <Users size={18} /> },
+            { label: 'Following', value: USER_PROFILE.stats.following, icon: <UserCheck size={18} /> },
+            { label: 'Ø Q-Score', value: USER_PROFILE.stats.avgQScore, icon: <BarChart3 size={18} /> }
+          ].map((stat, i) => (
+            <div key={i} className="bg-gray-800/50 border border-gray-700 rounded-xl p-3 text-center">
+              <div className="flex justify-center text-gray-400 mb-1">{stat.icon}</div>
+              <div className="text-xl font-bold text-white">{stat.value}</div>
+              <div className="text-xs text-gray-500">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Section Tabs */}
+      <div className="flex border-b border-gray-800 bg-black/50 sticky top-0 z-10">
+        {[
+          { id: 'overview', label: 'Übersicht', icon: <Target size={16} /> },
+          { id: 'achievements', label: 'Achievements', icon: <Trophy size={16} /> },
+          { id: 'posts', label: 'Meine Posts', icon: <FileText size={16} /> }
+        ].map(section => (
+          <button
+            key={section.id}
+            onClick={() => setActiveSection(section.id)}
+            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium border-b-2 transition-all ${activeSection === section.id
+              ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+              : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-900/50'
+              }`}
+          >
+            {section.icon}
+            {section.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {activeSection === 'overview' && (
+        <div className="p-4 space-y-4">
+          {/* Quick Stats */}
+          <div className="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 p-4 rounded-xl border border-emerald-500/20">
+            <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+              <Star className="text-yellow-400" size={18} />
+              Q-Rator Status
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-black/30 rounded-lg p-3">
+                <p className="text-gray-400 text-xs">Dein Rating-Einfluss</p>
+                <p className="text-emerald-400 text-lg font-bold">1.5x</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3">
+                <p className="text-gray-400 text-xs">Posts bewertet</p>
+                <p className="text-white text-lg font-bold">127</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3">
+                <p className="text-gray-400 text-xs">Accuracy Score</p>
+                <p className="text-cyan-400 text-lg font-bold">92%</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3">
+                <p className="text-gray-400 text-xs">Community Rank</p>
+                <p className="text-yellow-400 text-lg font-bold">#847</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-gray-900 p-4 rounded-xl border border-gray-800">
+            <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+              <Clock className="text-gray-400" size={18} />
+              Aktivität diese Woche
+            </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Posts erstellt</span>
+                <span className="text-white font-bold">3</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-gray-800">
+                <span className="text-gray-400">Ratings abgegeben</span>
+                <span className="text-white font-bold">24</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-gray-400">Kommentare</span>
+                <span className="text-white font-bold">12</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'achievements' && (
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3">
+            {USER_PROFILE.achievements.map(achievement => (
+              <div
+                key={achievement.id}
+                className={`p-4 rounded-xl border transition-all ${achievement.unlocked
+                  ? 'bg-gray-900 border-gray-700 hover:border-gray-600'
+                  : 'bg-gray-900/50 border-gray-800 opacity-50'
+                  }`}
+              >
+                <div className="text-3xl mb-2">{achievement.icon}</div>
+                <div className={`font-bold text-sm ${achievement.unlocked ? 'text-white' : 'text-gray-500'}`}>
+                  {achievement.name}
+                </div>
+                <div className="text-gray-500 text-xs mt-1">{achievement.desc}</div>
+                {achievement.unlocked && (
+                  <div className="mt-2">
+                    <span className="text-emerald-400 text-xs font-medium flex items-center gap-1">
+                      <Check size={12} /> Freigeschaltet
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'posts' && (
+        <div>
+          {userPosts.length > 0 ? (
+            userPosts.map(post => (
+              <Post
+                key={post.id}
+                post={post}
+                onRate={onRate}
+                onVote={onVote}
+                onAddComment={onAddComment}
+                showUScore={dataCollectionEnabled}
+              />
+            ))
+          ) : (
+            <div className="p-12 text-center text-gray-500 flex flex-col items-center">
+              <FileText size={32} className="text-gray-700 mb-4" />
+              <p className="text-lg font-medium text-white">Noch keine Posts</p>
+              <p className="text-sm max-w-xs mx-auto mt-2">
+                Deine Posts erscheinen hier. Teile dein Wissen mit der Community!
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function QRateApp() {
   // Auth Hook
   const { user, profile, signUp, signIn, signOut, isAuthenticated, loading: authLoading } = useAuthContext();
@@ -817,338 +1420,237 @@ export default function QRateApp() {
           {/* Main Feed */}
           < main className="flex-1 flex flex-col border-r border-gray-800 relative max-w-2xl w-full" >
 
-            {/* Collapsible Top Bar */}
-            < div className="sticky top-0 bg-black/95 backdrop-blur-md z-10 border-b border-gray-800" >
-              {/* Header / Trigger */}
-              < div className="flex justify-between items-center px-4 py-3" >
-                {/* Dynamic Header based on activeTab */}
-                {activeTab === 'feed' && (
-                  <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                    <h2 className="text-xl font-bold">Home</h2>
-                    <span className="text-gray-500 text-sm">/</span>
-                    <span className="text-emerald-400 text-sm font-medium flex items-center gap-1">
-                      {FILTER_PRESETS.find(p => p.id === activePreset)?.label || 'Benutzerdefiniert'}
-                      <span className="text-xs bg-emerald-500/10 px-1 rounded border border-emerald-500/20">Q {minQScore}+</span>
-                    </span>
-                    <button className="ml-1 w-6 h-6 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors">
-                      {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                  </div>
-                )}
-
-                {activeTab === 'explore' && (
-                  <div className="flex-1 flex items-center gap-3">
-                    <h2 className="text-xl font-bold">Entdecken</h2>
-                    <div className="flex-1 max-w-md relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Posts, Nutzer oder Themen suchen..."
-                        className="w-full bg-gray-800 border border-gray-700 rounded-full pl-10 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
-                      />
+            {/* Feed Tab Content */}
+            {activeTab === 'feed' && (
+              <>
+                {/* Collapsible Top Bar */}
+                <div className="sticky top-0 bg-black/95 backdrop-blur-md z-10 border-b border-gray-800">
+                  {/* Header / Trigger */}
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                      <h2 className="text-xl font-bold">Home</h2>
+                      <span className="text-gray-500 text-sm">/</span>
+                      <span className="text-emerald-400 text-sm font-medium flex items-center gap-1">
+                        {FILTER_PRESETS.find(p => p.id === activePreset)?.label || 'Benutzerdefiniert'}
+                        <span className="text-xs bg-emerald-500/10 px-1 rounded border border-emerald-500/20">Q {minQScore}+</span>
+                      </span>
+                      <button className="ml-1 w-6 h-6 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors">
+                        {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
                     </div>
-                  </div>
-                )}
 
-                {activeTab === 'notif' && (
-                  <div className="flex items-center gap-2">
-                    <Bell className="text-emerald-400" size={20} />
-                    <h2 className="text-xl font-bold">Mitteilungen</h2>
-                  </div>
-                )}
+                    {/* Settings Toggle (Always Visible) */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                        className={`p-2 rounded-full transition-colors ${isSettingsOpen ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white'}`}
+                      >
+                        <SettingsIcon size={20} />
+                      </button>
 
-                {activeTab === 'qrator' && (
-                  <div className="flex items-center gap-2">
-                    <Hexagon className="text-emerald-400" size={20} fill="currentColor" />
-                    <h2 className="text-xl font-bold">Q-Rator Hub</h2>
-                  </div>
-                )}
-
-                {/* Settings Toggle (Always Visible) */}
-                <div className="relative">
-                  <button
-                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                    className={`p-2 rounded-full transition-colors ${isSettingsOpen ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    <SettingsIcon size={20} />
-                  </button>
-
-                  {/* Settings Dropdown */}
-                  {isSettingsOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-4 z-50 animate-in fade-in zoom-in duration-200">
-                      <div className="flex items-center gap-2 mb-3 text-gray-400 text-xs font-bold uppercase tracking-wider">
-                        <Shield size={12} />
-                        <span>Einstellungen</span>
-                      </div>
-                      <div className={`rounded-lg p-3 border transition-colors duration-300 ${dataCollectionEnabled ? 'bg-gray-800/50 border-gray-700' : 'bg-red-900/10 border-red-900/30'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {dataCollectionEnabled ? <Database size={16} className="text-cyan-400" /> : <EyeOff size={16} className="text-red-400" />}
-                            <span className="font-bold text-sm text-gray-200">U-Score / Daten</span>
+                      {/* Settings Dropdown */}
+                      {isSettingsOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-72 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-4 z-50 animate-in fade-in zoom-in duration-200">
+                          <div className="flex items-center gap-2 mb-3 text-gray-400 text-xs font-bold uppercase tracking-wider">
+                            <Shield size={12} />
+                            <span>Einstellungen</span>
                           </div>
-                          <button
-                            onClick={() => setDataCollectionEnabled(!dataCollectionEnabled)}
-                            className={`w-10 h-5 rounded-full relative transition-colors ${dataCollectionEnabled ? 'bg-cyan-600' : 'bg-gray-700'}`}
-                          >
-                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${dataCollectionEnabled ? 'left-6' : 'left-1'}`}></div>
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-gray-400 leading-tight">
-                          {dataCollectionEnabled
-                            ? "Analyse deiner Vorlieben ist AKTIV. Dein Feed ist personalisiert."
-                            : "Datensparmodus. Keine Analyse, kein U-Score."}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div >
-
-              {/* Collapsible Content - only show for feed tab */}
-              {
-                activeTab === 'feed' && isFilterOpen && (
-                  <div className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200 border-t border-gray-800/50 pt-2">
-                    <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide">
-                      {FILTER_PRESETS.map(preset => (
-                        <button
-                          key={preset.id}
-                          onClick={() => applyPreset(preset)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activePreset === preset.id
-                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                            : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:border-gray-500'
-                            }`}
-                        >
-                          {preset.icon}
-                          {preset.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-4 bg-gray-900/50 p-3 rounded-lg border border-gray-800">
-                      <div className={`flex flex-col items-center justify-center w-10 h-10 rounded bg-gray-800 border ${minQScore >= 70 ? 'border-emerald-500 text-emerald-400' : minQScore >= 40 ? 'border-yellow-500 text-yellow-400' : 'border-red-500 text-red-500'}`}>
-                        <span className="text-sm font-bold">{minQScore}</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Noise</span>
-                          <span>Signal</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={minQScore}
-                          onChange={(e) => {
-                            setMinQScore(parseInt(e.target.value));
-                            setActivePreset('custom');
-                          }}
-                          className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-            </div >
-
-            {/* Feed Content */}
-            < div className="flex-1 overflow-y-auto custom-scrollbar" >
-
-              {/* Post Input Area - only for feed tab */}
-              {activeTab === 'feed' && (
-                < div className="p-4 border-b border-gray-800 flex gap-4 bg-black/50" >
-                  <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white text-sm ${isAuthenticated && profile ? profile.avatar : 'bg-gray-600'}`}>
-                    {isAuthenticated && profile ? profile.username?.charAt(0).toUpperCase() : '?'}
-                  </div>
-                  <div className="flex-1">
-                    {/* User Status Badge inline */}
-                    <div className="flex items-center gap-2 mb-2">
-                      {isAuthenticated && profile ? (
-                        <>
-                          <span className="text-xs text-gray-400 font-medium">{profile.username}</span>
-                          <div className="flex items-center gap-1 bg-gray-900 px-2 py-0.5 rounded border border-gray-800">
-                            <div className={`w-2 h-2 rounded-full ${userAvgQScore >= 70 ? 'bg-emerald-500' : 'bg-yellow-500'}`}></div>
-                            <span className={`text-xs font-mono font-bold ${userAvgQScore >= 70 ? 'text-emerald-400' : 'text-yellow-400'}`}>Q-Score: {userAvgQScore}</span>
+                          <div className={`rounded-lg p-3 border transition-colors duration-300 ${dataCollectionEnabled ? 'bg-gray-800/50 border-gray-700' : 'bg-red-900/10 border-red-900/30'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                {dataCollectionEnabled ? <Database size={16} className="text-cyan-400" /> : <EyeOff size={16} className="text-red-400" />}
+                                <span className="font-bold text-sm text-gray-200">U-Score / Daten</span>
+                              </div>
+                              <button
+                                onClick={() => setDataCollectionEnabled(!dataCollectionEnabled)}
+                                className={`w-10 h-5 rounded-full relative transition-colors ${dataCollectionEnabled ? 'bg-cyan-600' : 'bg-gray-700'}`}
+                              >
+                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${dataCollectionEnabled ? 'left-6' : 'left-1'}`}></div>
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-gray-400 leading-tight">
+                              {dataCollectionEnabled
+                                ? "Analyse deiner Vorlieben ist AKTIV. Dein Feed ist personalisiert."
+                                : "Datensparmodus. Keine Analyse, kein U-Score."}
+                            </p>
                           </div>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => setShowAuthModal(true)}
-                          className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-                        >
-                          <LogIn size={12} />
-                          <span>Anmelden zum Posten</span>
-                        </button>
+                        </div>
                       )}
                     </div>
-
-                    <textarea
-                      value={postText}
-                      onChange={(e) => setPostText(e.target.value)}
-                      placeholder="Teile Wissen, keine Gerüchte..."
-                      className="w-full bg-transparent border-none focus:ring-0 text-lg placeholder-gray-600 text-white resize-none h-20 p-0"
-                    />
-                    <div className="flex justify-between items-center mt-2 border-t border-gray-800/50 pt-2">
-                      <div className="flex gap-2">
-                        <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><ImageIcon size={20} /></button>
-                        <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><PlayCircle size={20} /></button>
-                      </div>
-                      <button
-                        onClick={handlePostSubmit}
-                        disabled={!postText.trim()}
-                        className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold transition-all ${postText.trim()
-                          ? 'bg-emerald-500 text-black hover:bg-emerald-400'
-                          : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                          }`}
-                      >
-                        <span>Posten</span>
-                        <Send size={14} />
-                      </button>
-                    </div>
                   </div>
-                </div >
-              )}
 
-              {/* Notifications Tab Content */}
-              {activeTab === 'notif' && (
-                <div className="p-8 text-center">
-                  {isAuthenticated ? (
-                    <div className="flex flex-col items-center">
-                      <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                        <Bell size={40} className="text-gray-600" />
+                  {/* Collapsible Content */}
+                  {isFilterOpen && (
+                    <div className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200 border-t border-gray-800/50 pt-2">
+                      <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide">
+                        {FILTER_PRESETS.map(preset => (
+                          <button
+                            key={preset.id}
+                            onClick={() => applyPreset(preset)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${activePreset === preset.id
+                              ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                              : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:border-gray-500'
+                              }`}
+                          >
+                            {preset.icon}
+                            {preset.label}
+                          </button>
+                        ))}
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">Keine neuen Mitteilungen</h3>
-                      <p className="text-gray-500 max-w-sm">
-                        Wenn jemand auf deine Posts reagiert oder dir folgt, erscheint es hier.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                        <Bell size={40} className="text-gray-600" />
+
+                      <div className="flex items-center gap-4 bg-gray-900/50 p-3 rounded-lg border border-gray-800">
+                        <div className={`flex flex-col items-center justify-center w-10 h-10 rounded bg-gray-800 border ${minQScore >= 70 ? 'border-emerald-500 text-emerald-400' : minQScore >= 40 ? 'border-yellow-500 text-yellow-400' : 'border-red-500 text-red-500'}`}>
+                          <span className="text-sm font-bold">{minQScore}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>Noise</span>
+                            <span>Signal</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={minQScore}
+                            onChange={(e) => {
+                              setMinQScore(parseInt(e.target.value));
+                              setActivePreset('custom');
+                            }}
+                            className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-white"
+                          />
+                        </div>
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">Melde dich an</h3>
-                      <p className="text-gray-500 max-w-sm mb-4">
-                        Um Mitteilungen zu erhalten, musst du angemeldet sein.
-                      </p>
-                      <button
-                        onClick={() => setShowAuthModal(true)}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-2 px-6 rounded-full transition-colors"
-                      >
-                        Jetzt anmelden
-                      </button>
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Q-Rator Hub Tab Content */}
-              {activeTab === 'qrator' && (
-                <div className="p-6">
-                  {/* Info Banner */}
-                  <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 rounded-xl p-6 mb-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Hexagon size={28} className="text-black" fill="currentColor" />
+                {/* Feed Content */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+                  {/* Post Input Area */}
+                  <div className="p-4 border-b border-gray-800 flex gap-4 bg-black/50">
+                    <div className="w-10 h-10 rounded-full bg-indigo-500 flex-shrink-0 flex items-center justify-center font-bold text-white text-sm">
+                      Du
+                    </div>
+                    <div className="flex-1">
+                      {/* User Status Badge inline */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">Dein Status</span>
+                        <div className="flex items-center gap-1 bg-gray-900 px-2 py-0.5 rounded border border-gray-800">
+                          <div className={`w-2 h-2 rounded-full ${userAvgQScore >= 70 ? 'bg-emerald-500' : 'bg-yellow-500'}`}></div>
+                          <span className={`text-xs font-mono font-bold ${userAvgQScore >= 70 ? 'text-emerald-400' : 'text-yellow-400'}`}>Ø Q-Score: {userAvgQScore}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-2">Was ist ein Q-Rator?</h3>
-                        <p className="text-gray-300 text-sm leading-relaxed">
-                          Q-Ratoren sind verifizierte Content-Ersteller, die für qualitativ hochwertige,
-                          faktisch korrekte Beiträge bekannt sind. Sie haben einen höheren Einfluss auf
-                          den Q-Score und helfen der Community, Qualität von Noise zu unterscheiden.
-                        </p>
+
+                      <textarea
+                        value={postText}
+                        onChange={(e) => setPostText(e.target.value)}
+                        placeholder="Teile Wissen, keine Gerüchte..."
+                        className="w-full bg-transparent border-none focus:ring-0 text-lg placeholder-gray-600 text-white resize-none h-20 p-0"
+                      />
+                      <div className="flex justify-between items-center mt-2 border-t border-gray-800/50 pt-2">
+                        <div className="flex gap-2">
+                          <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><ImageIcon size={20} /></button>
+                          <button className="text-emerald-500 hover:bg-emerald-500/10 p-2 rounded-full transition-colors"><PlayCircle size={20} /></button>
+                        </div>
+                        <button
+                          onClick={handlePostSubmit}
+                          disabled={!postText.trim()}
+                          className={`flex items-center gap-2 px-5 py-1.5 rounded-full font-bold transition-all ${postText.trim()
+                            ? 'bg-emerald-500 text-black hover:bg-emerald-400'
+                            : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                            }`}
+                        >
+                          <span>Posten</span>
+                          <Send size={14} />
+                        </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* How to become a Q-Rator */}
-                  <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 mb-6">
-                    <h4 className="font-bold text-white mb-3 flex items-center gap-2">
-                      <UserCheck size={18} className="text-emerald-400" />
-                      So wirst du Q-Rator
-                    </h4>
-                    <ul className="space-y-2 text-sm text-gray-400">
-                      <li className="flex items-start gap-2">
-                        <span className="text-emerald-400 font-bold">1.</span>
-                        <span>Poste regelmäßig qualitativ hochwertige Inhalte</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-emerald-400 font-bold">2.</span>
-                        <span>Erhalte konstant hohe Q-Scores (Ø 80+)</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-emerald-400 font-bold">3.</span>
-                        <span>Werde von bestehenden Q-Ratoren empfohlen</span>
-                      </li>
-                    </ul>
-                  </div>
+                  {/* Posts List */}
+                  {displayedPosts.length > 0 ? (
+                    displayedPosts.map(post => (
+                      <Post
+                        key={post.id}
+                        post={post}
+                        onRate={handleRate}
+                        onVote={handleVote}
+                        onAddComment={(postId, comment) => {
+                          setPosts(posts.map(p =>
+                            p.id === postId
+                              ? { ...p, commentsList: [...(p.commentsList || []), comment] }
+                              : p
+                          ));
+                        }}
+                        showUScore={dataCollectionEnabled}
+                      />
+                    ))
+                  ) : (
+                    <div className="p-12 text-center text-gray-500 flex flex-col items-center">
+                      <Filter size={32} className="text-gray-700 mb-4" />
+                      <p className="text-lg font-medium text-white">Filter zu streng?</p>
+                      <p className="text-sm max-w-xs mx-auto mt-2">Keine Posts mit Q-Score &gt; {minQScore} in dieser Kategorie.</p>
+                      <button
+                        onClick={() => { setMinQScore(0); setActivePreset('all'); }}
+                        className="mt-6 text-emerald-400 text-sm hover:underline"
+                      >
+                        Alles anzeigen
+                      </button>
+                    </div>
+                  )}
 
-                  {/* Q-Rator Posts */}
-                  <h4 className="font-bold text-white mb-4 flex items-center gap-2">
-                    <TrendingUp size={18} className="text-emerald-400" />
-                    Top Q-Rator Beiträge
-                  </h4>
+                  {/* End of Feed */}
+                  {displayedPosts.length > 0 && (
+                    <div className="p-8 text-center border-t border-gray-800 pb-20">
+                      <p className="text-emerald-500 font-medium text-sm tracking-widest uppercase">End of Signal</p>
+                      <p className="text-gray-600 text-xs mt-2">Du hast alle relevanten Inhalte gesehen.</p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </>
+            )}
 
-              {/* Posts List - for feed, explore, and qrator tabs */}
-              {(activeTab === 'feed' || activeTab === 'explore' || activeTab === 'qrator') && (
-                loading ? (
-                  <div className="p-12 text-center flex flex-col items-center">
-                    <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-gray-400">Posts werden geladen...</p>
-                  </div>
-                ) : error ? (
-                  <div className="p-12 text-center text-red-400 flex flex-col items-center">
-                    <p className="text-lg font-medium">Fehler beim Laden</p>
-                    <p className="text-sm max-w-xs mx-auto mt-2">{error}</p>
-                  </div>
-                ) : displayedPosts.length > 0 ? (
-                  displayedPosts.map(post => (
-                    <Post
-                      key={post.id}
-                      post={post}
-                      onRate={handleRate}
-                      onVote={handleVote}
-                      onAddComment={(postId, comment) => {
-                        addComment(postId, comment);
-                      }}
-                      showUScore={dataCollectionEnabled}
-                      userVote={userVotes[post.id] || null}
-                      profile={profile}
-                      isAuthenticated={isAuthenticated}
-                      onAuthRequired={() => setShowAuthModal(true)}
-                    />
-                  ))
-                ) : (
-                  <div className="p-12 text-center text-gray-500 flex flex-col items-center">
-                    <Filter size={32} className="text-gray-700 mb-4" />
-                    <p className="text-lg font-medium text-white">Filter zu streng?</p>
-                    <p className="text-sm max-w-xs mx-auto mt-2">Keine Posts mit Q-Score &gt; {minQScore} in dieser Kategorie.</p>
-                    <button
-                      onClick={() => { setMinQScore(0); setActivePreset('all'); }}
-                      className="mt-6 text-emerald-400 text-sm hover:underline"
-                    >
-                      Alles anzeigen
-                    </button>
-                  </div>
-                )
-              )}
+            {/* Explore Tab */}
+            {activeTab === 'explore' && (
+              <ExploreTab
+                posts={posts}
+                onRate={handleRate}
+                onVote={handleVote}
+                onAddComment={(postId, comment) => {
+                  setPosts(posts.map(p =>
+                    p.id === postId
+                      ? { ...p, commentsList: [...(p.commentsList || []), comment] }
+                      : p
+                  ));
+                }}
+                dataCollectionEnabled={dataCollectionEnabled}
+              />
+            )}
 
-              {/* End of Feed */}
-              {
-                displayedPosts.length > 0 && (
-                  <div className="p-8 text-center border-t border-gray-800 pb-20">
-                    <p className="text-emerald-500 font-medium text-sm tracking-widest uppercase">End of Signal</p>
-                    <p className="text-gray-600 text-xs mt-2">Du hast alle relevanten Inhalte gesehen.</p>
-                  </div>
-                )
-              }
-            </div >
-          </main >
+            {/* Notifications Tab */}
+            {activeTab === 'notif' && (
+              <NotificationsTab />
+            )}
+
+            {/* Q-Rator Hub Tab */}
+            {activeTab === 'qrator' && (
+              <QRatorHubTab
+                posts={posts}
+                onRate={handleRate}
+                onVote={handleVote}
+                onAddComment={(postId, comment) => {
+                  setPosts(posts.map(p =>
+                    p.id === postId
+                      ? { ...p, commentsList: [...(p.commentsList || []), comment] }
+                      : p
+                  ));
+                }}
+                dataCollectionEnabled={dataCollectionEnabled}
+              />
+            )}
+
+          </main>
 
           {/* Right Sidebar */}
           < div className="w-80 hidden lg:block p-6 space-y-6" >
