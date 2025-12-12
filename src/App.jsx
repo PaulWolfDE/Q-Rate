@@ -40,7 +40,9 @@ import {
   BarChart3,
   Users,
   FileText,
-  Clock
+  Clock,
+  Home,
+  Compass
 } from 'lucide-react';
 
 // --- Mock Data ---
@@ -394,6 +396,16 @@ const USER_PROFILE = {
     following: 156,
     avgQScore: 74
   },
+  // Q-Rator Anti-Polarization Metrics
+  qratorMetrics: {
+    accuracyScore: 78,           // 0-100%, how often user's ratings align with final consensus  
+    earlyRaterBonus: 320,        // Accumulated XP from early ratings
+    contraryAccuracy: 82,        // % of against-majority ratings that were correct
+    polarizingPostsRated: 45,    // Number of high-variance posts rated
+    totalRatings: 127,           // Total ratings given
+    correctContrary: 18,         // Correct ratings that went against majority
+    totalContrary: 22            // Total ratings that went against majority
+  },
   achievements: [
     { id: 1, name: 'Erste Schritte', desc: 'Erster Post veröffentlicht', icon: '🚀', unlocked: true },
     { id: 2, name: 'Qualitätsbewusst', desc: '10 Posts mit Q-Score > 70', icon: '⭐', unlocked: true },
@@ -402,8 +414,100 @@ const USER_PROFILE = {
     { id: 5, name: 'Fact Checker', desc: '50 Posts bewertet', icon: '✅', unlocked: true },
     { id: 6, name: 'Elite Q-Rator', desc: 'Level 5 erreicht', icon: '💎', unlocked: false },
     { id: 7, name: 'Influencer', desc: '1000 Follower erreicht', icon: '🌟', unlocked: false },
-    { id: 8, name: 'Perfectionist', desc: 'Post mit Q-Score 100', icon: '🏆', unlocked: false }
+    { id: 8, name: 'Perfectionist', desc: 'Post mit Q-Score 100', icon: '🏆', unlocked: false },
+    { id: 9, name: 'Polarisations-Experte', desc: '20 korrekte Gegen-den-Strom Bewertungen', icon: '🎯', unlocked: false },
+    { id: 10, name: 'Früherkenner', desc: '50 Posts vor Konsensbildung bewertet', icon: '⚡', unlocked: false }
   ]
+};
+
+// --- Q-Rator Anti-Polarization Helper Functions ---
+
+/**
+ * Calculate polarization score based on likes/dislikes ratio
+ * High polarization = more controversial/divisive content
+ * Range: 0 (no polarization) to 100 (extreme polarization)
+ */
+const calculatePolarization = (likes, dislikes) => {
+  const total = likes + dislikes;
+  if (total < 10) return 0; // Not enough data
+
+  const ratio = Math.min(likes, dislikes) / Math.max(likes, dislikes, 1);
+  // Ratio close to 1 = highly polarizing (50/50 split)
+  // Ratio close to 0 = consensus (everyone agrees)
+  return Math.round(ratio * 100);
+};
+
+/**
+ * Check if a post is considered "polarizing"
+ * Threshold: 30% means if 30%+ of reactions are the minority opinion
+ */
+const isPolarizing = (likes, dislikes) => {
+  return calculatePolarization(likes, dislikes) >= 30;
+};
+
+/**
+ * Calculate XP reward for rating a post
+ * Includes bonuses for early rating and polarizing content
+ */
+const calculateRatingXP = (post, userRating) => {
+  let xp = 10; // Base XP for any rating
+  let bonuses = [];
+
+  // Early Rater Bonus: More XP if rated before consensus (< 50 ratings)
+  if (post.ratingCount < 50) {
+    const earlyBonus = Math.round(15 * (1 - post.ratingCount / 50));
+    xp += earlyBonus;
+    if (earlyBonus > 5) {
+      bonuses.push({ type: 'early', amount: earlyBonus, label: 'Frühe Bewertung' });
+    }
+  }
+
+  // Polarization Bonus: More XP for engaging with divisive content
+  const polarization = calculatePolarization(post.likes, post.dislikes);
+  if (polarization >= 30) {
+    const polBonus = Math.round(polarization / 10); // 3-10 XP based on polarization
+    xp += polBonus;
+    bonuses.push({ type: 'polarizing', amount: polBonus, label: 'Polarisierender Inhalt' });
+  }
+
+  return { xp, bonuses };
+};
+
+/**
+ * Evaluate if user's rating was "against the flow" (against current majority)
+ */
+const isAgainstMajority = (userRating, currentQScore) => {
+  // If Q-Score is high (>60) and user rates low (<40), they're against majority
+  // If Q-Score is low (<40) and user rates high (>60), they're against majority
+  const majorityThreshold = 20;
+  return Math.abs(userRating - currentQScore) > majorityThreshold;
+};
+
+/**
+ * Calculate deferred accuracy bonus (called when post score stabilizes)
+ * This rewards users who rated correctly even when going against the crowd
+ */
+const calculateAccuracyBonus = (userRating, finalScore, wasAgainstMajority) => {
+  const accuracy = 100 - Math.abs(userRating - finalScore);
+  let bonusXP = 0;
+  let bonuses = [];
+
+  // High accuracy bonus
+  if (accuracy >= 80) {
+    bonusXP += 20;
+    bonuses.push({ type: 'accuracy', amount: 20, label: 'Hohe Genauigkeit' });
+  } else if (accuracy >= 60) {
+    bonusXP += 10;
+    bonuses.push({ type: 'accuracy', amount: 10, label: 'Gute Genauigkeit' });
+  }
+
+  // Against-the-flow bonus (if accurate despite going against majority)
+  if (wasAgainstMajority && accuracy >= 70) {
+    bonusXP += 25;
+    bonuses.push({ type: 'contrary', amount: 25, label: 'Gegen-den-Strom Bonus!' });
+  }
+
+  return { xp: bonusXP, bonuses };
 };
 
 // --- Sub-Components ---
@@ -467,10 +571,26 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // XP Reward State
+  const [xpEarned, setXpEarned] = useState(null);
+  const [showXpReward, setShowXpReward] = useState(false);
+
   const handleRateSubmit = () => {
-    onRate(post.id, sliderValue);
+    // Calculate XP with anti-polarization bonuses
+    const xpResult = calculateRatingXP(post, sliderValue);
+    const wasAgainst = isAgainstMajority(sliderValue, post.qScore);
+
+    // Store rating info for later accuracy evaluation
+    onRate(post.id, sliderValue, { wasAgainstMajority: wasAgainst });
+
+    // Show XP reward animation
+    setXpEarned(xpResult);
+    setShowXpReward(true);
     setHasRated(true);
     setIsRating(false);
+
+    // Hide XP notification after 3 seconds
+    setTimeout(() => setShowXpReward(false), 3000);
   };
 
   const handleVote = (type) => {
@@ -522,21 +642,21 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
   };
 
   return (
-    <div className="border-b border-gray-800 p-5 hover:bg-gray-900/40 transition-colors animate-in fade-in slide-in-from-top-4 duration-500">
-      <div className="flex gap-4">
-        <div className={`w-12 h-12 rounded-full flex-shrink-0 ${post.avatar}`} />
+    <div className="border-b border-gray-800 p-3 sm:p-5 hover:bg-gray-900/40 transition-colors animate-in fade-in slide-in-from-top-4 duration-500">
+      <div className="flex gap-3 sm:gap-4">
+        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0 ${post.avatar}`} />
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-white">{post.user}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <span className="font-bold text-white text-sm sm:text-base truncate">{post.user}</span>
               {post.isCurator && (
-                <span className="text-emerald-400" title="Verifizierter Q-Rator">
+                <span className="text-emerald-400 flex-shrink-0" title="Verifizierter Q-Rator">
                   <Hexagon size={14} fill="currentColor" />
                 </span>
               )}
-              <span className="text-gray-500 text-sm">{post.handle} · {post.timestamp}</span>
+              <span className="text-gray-500 text-xs sm:text-sm truncate">{post.handle} · {post.timestamp}</span>
             </div>
 
             {/* Scores Area */}
@@ -574,7 +694,7 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
             </div>
           </div>
 
-          <p className="mt-1 text-gray-200 text-lg leading-relaxed whitespace-pre-wrap">
+          <p className="mt-2 text-gray-200 text-base sm:text-lg leading-relaxed whitespace-pre-wrap">
             {post.content}
           </p>
 
@@ -645,6 +765,31 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
                   >
                     Bestätigen
                   </button>
+                </div>
+              )}
+
+              {/* XP Reward Notification */}
+              {showXpReward && xpEarned && (
+                <div className="absolute bottom-10 right-0 bg-gradient-to-r from-emerald-900 to-emerald-800 border border-emerald-500/50 p-3 rounded-xl shadow-2xl z-20 w-56 animate-in fade-in zoom-in duration-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+                      <Zap size={16} className="text-black" />
+                    </div>
+                    <div>
+                      <div className="text-emerald-400 font-bold text-lg">+{xpEarned.xp} XP</div>
+                      <div className="text-emerald-300/60 text-xs">Bewertung eingereicht!</div>
+                    </div>
+                  </div>
+                  {xpEarned.bonuses.length > 0 && (
+                    <div className="space-y-1 pt-2 border-t border-emerald-600/30">
+                      {xpEarned.bonuses.map((bonus, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <span className="text-emerald-200">{bonus.label}</span>
+                          <span className="text-emerald-400 font-bold">+{bonus.amount}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -769,6 +914,42 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
   );
 };
 
+// --- Mobile Bottom Navigation Component ---
+const MobileBottomNav = ({ activeTab, setActiveTab }) => {
+  const navItems = [
+    { icon: <Home size={24} />, label: "Feed", id: 'feed' },
+    { icon: <Compass size={24} />, label: "Entdecken", id: 'explore' },
+    { icon: <Bell size={24} />, label: "Updates", id: 'notif' },
+    { icon: <Hexagon size={24} />, label: "Hub", id: 'qrator' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md border-t border-gray-800 z-50 sm:hidden safe-area-bottom">
+      <div className="flex justify-around items-center py-2 px-1">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            className={`flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all duration-200 min-w-[64px] ${activeTab === item.id
+              ? 'text-emerald-400 bg-emerald-500/10'
+              : 'text-gray-500 hover:text-gray-300'
+              }`}
+          >
+            {React.cloneElement(item.icon, {
+              fill: activeTab === item.id ? 'currentColor' : 'none',
+              strokeWidth: activeTab === item.id ? 2.5 : 2
+            })}
+            <span className={`text-[10px] mt-1 font-medium ${activeTab === item.id ? 'text-emerald-400' : 'text-gray-500'
+              }`}>
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+};
+
 // --- Explore Tab Component ---
 const ExploreTab = ({ posts, onRate, onVote, onAddComment, dataCollectionEnabled }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -788,7 +969,7 @@ const ExploreTab = ({ posts, onRate, onVote, onAddComment, dataCollectionEnabled
   }, [posts, searchQuery, selectedCategory]);
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar">
+    <div className="flex-1 overflow-y-auto custom-scrollbar pb-20 sm:pb-0">
       {/* Search Header */}
       <div className="sticky top-0 bg-black/95 backdrop-blur-md z-10 p-4 border-b border-gray-800">
         <div className="relative">
@@ -927,7 +1108,7 @@ const NotificationsTab = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar">
+    <div className="flex-1 overflow-y-auto custom-scrollbar pb-20 sm:pb-0">
       {/* Header */}
       <div className="sticky top-0 bg-black/95 backdrop-blur-md z-10 border-b border-gray-800">
         <div className="flex items-center justify-between p-4">
@@ -1050,7 +1231,7 @@ const QRatorHubTab = ({ posts, onRate, onVote, onAddComment, dataCollectionEnabl
   const progressPercentage = (USER_PROFILE.xp / USER_PROFILE.xpToNext) * 100;
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar">
+    <div className="flex-1 overflow-y-auto custom-scrollbar pb-20 sm:pb-0">
       {/* Profile Header */}
       <div className="bg-gradient-to-br from-gray-900 via-gray-900 to-emerald-900/20 p-6 border-b border-gray-800">
         <div className="flex items-start gap-4">
@@ -1141,15 +1322,55 @@ const QRatorHubTab = ({ posts, onRate, onVote, onAddComment, dataCollectionEnabl
               </div>
               <div className="bg-black/30 rounded-lg p-3">
                 <p className="text-gray-400 text-xs">Posts bewertet</p>
-                <p className="text-white text-lg font-bold">127</p>
+                <p className="text-white text-lg font-bold">{USER_PROFILE.qratorMetrics.totalRatings}</p>
               </div>
               <div className="bg-black/30 rounded-lg p-3">
                 <p className="text-gray-400 text-xs">Accuracy Score</p>
-                <p className="text-cyan-400 text-lg font-bold">92%</p>
+                <p className="text-cyan-400 text-lg font-bold">{USER_PROFILE.qratorMetrics.accuracyScore}%</p>
               </div>
               <div className="bg-black/30 rounded-lg p-3">
                 <p className="text-gray-400 text-xs">Community Rank</p>
                 <p className="text-yellow-400 text-lg font-bold">#847</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Anti-Polarization Metrics */}
+          <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-4 rounded-xl border border-purple-500/20">
+            <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+              <Target className="text-purple-400" size={18} />
+              Anti-Polarisations-Metriken
+            </h3>
+            <p className="text-gray-400 text-xs mb-3">
+              Diese Werte zeigen, wie unabhängig und akkurat du bewertest – auch gegen den Strom.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-black/30 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap size={14} className="text-amber-400" />
+                  <p className="text-gray-400 text-xs">Frühe Bewertungen XP</p>
+                </div>
+                <p className="text-amber-400 text-lg font-bold">+{USER_PROFILE.qratorMetrics.earlyRaterBonus}</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Shield size={14} className="text-pink-400" />
+                  <p className="text-gray-400 text-xs">Gegen-den-Strom Accuracy</p>
+                </div>
+                <p className="text-pink-400 text-lg font-bold">{USER_PROFILE.qratorMetrics.contraryAccuracy}%</p>
+                <p className="text-gray-500 text-[10px]">{USER_PROFILE.qratorMetrics.correctContrary}/{USER_PROFILE.qratorMetrics.totalContrary} korrekt</p>
+              </div>
+              <div className="bg-black/30 rounded-lg p-3 col-span-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-xs">Polarisierende Posts bewertet</p>
+                    <p className="text-purple-400 text-lg font-bold">{USER_PROFILE.qratorMetrics.polarizingPostsRated}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-gray-500 text-xs">Du bewertest</p>
+                    <p className="text-emerald-400 text-sm font-bold">Unabhängig ✓</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1473,7 +1694,7 @@ export default function QRateApp() {
               </div>
 
               {/* Feed Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="flex-1 overflow-y-auto custom-scrollbar pb-20 sm:pb-0">
 
                 {/* Post Input Area */}
                 <div className="p-4 border-b border-gray-800 flex gap-4 bg-black/50">
@@ -1649,6 +1870,9 @@ export default function QRateApp() {
           </div>
 
         </div>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
     </div>
   );
