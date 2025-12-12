@@ -266,8 +266,37 @@ const INITIAL_POSTS = [
     isCurator: false,
     timestamp: "4h",
     category: "entertainment"
+  },
+  // --- Sponsored Ad Post (high-quality, Q-Score >= 80 required) ---
+  {
+    id: 11,
+    user: "SolarTech Deutschland",
+    handle: "@solartech_de",
+    avatar: "bg-amber-500",
+    content: "💡 Wusstet ihr? Moderne Balkonkraftwerke erzeugen bis zu 800 kWh pro Jahr – genug, um euren Kühlschrank, Router und Laptop komplett solar zu betreiben. Die durchschnittliche Amortisationszeit liegt bei nur 3-4 Jahren. Hier ist eine Übersicht der aktuellen Effizienzwerte verschiedener Panel-Typen.",
+    mediaType: "image",
+    mediaContent: "solar-efficiency-chart",
+    qScore: 86,
+    uScore: 0, // Not used for ads
+    uScoreReason: null,
+    ratingCount: 890,
+    likes: 2800,
+    dislikes: 45,
+    commentsList: [
+      { id: 1, user: "EcoEnthusiast", handle: "@eco_fan", avatar: "bg-green-500", content: "Super informativ! Habe mein Balkonkraftwerk letztes Jahr installiert und spare bereits 180€/Jahr.", timestamp: "2h", likes: 156 },
+      { id: 2, user: "TechSkeptiker", handle: "@tech_skeptic", avatar: "bg-gray-500", content: "Welche Panels werden hier genau verglichen?", timestamp: "1h", likes: 34 },
+      { id: 3, user: "SolarTech Deutschland", handle: "@solartech_de", avatar: "bg-amber-500", content: "@tech_skeptic Mono-, Poly- und Dünnschicht-Zellen. Link zur Studie im Bio!", timestamp: "45m", likes: 67 }
+    ],
+    isCurator: true,
+    timestamp: "Gesponsert",
+    category: "tech",
+    isAd: true,
+    adDisclaimer: "Gesponsert von SolarTech Deutschland"
   }
 ];
+
+// --- Ad Configuration ---
+const AD_MIN_QSCORE = 80; // Minimum Q-Score required for ads to be displayed
 
 // --- Filter Presets Configuration ---
 const FILTER_PRESETS = [
@@ -661,7 +690,26 @@ const Post = ({ post, onRate, onVote, onAddComment, showUScore }) => {
 
             {/* Scores Area */}
             <div className="flex gap-3">
-              {showUScore && (
+              {/* Ad Badge OR U-Score */}
+              {post.isAd ? (
+                <div className="flex flex-col items-center group relative cursor-help">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full font-bold shadow-lg bg-amber-500/20 border-2 border-amber-500 text-amber-400">
+                    <span className="text-[10px]">AD</span>
+                  </div>
+                  <span className="text-[10px] text-amber-400 font-mono mt-1">#Werbung</span>
+
+                  {/* Ad Transparency Tooltip */}
+                  <div className="absolute right-0 top-10 mt-2 w-60 bg-gray-800 p-3 rounded-lg border border-amber-500/30 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-xl pointer-events-none">
+                    <div className="font-bold text-amber-400 mb-1 border-b border-gray-700 pb-1 flex items-center gap-2">
+                      <Info size={12} /> Gesponserte Inhalte
+                    </div>
+                    <p className="leading-relaxed mb-2">{post.adDisclaimer || "Dieser Beitrag ist Werbung."}</p>
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded px-2 py-1 text-emerald-400 text-[10px]">
+                      ✓ Q-Score ≥ {AD_MIN_QSCORE} – Qualitätsgeprüft
+                    </div>
+                  </div>
+                </div>
+              ) : showUScore && (
                 <div className="flex flex-col items-center group relative cursor-help">
                   <ScoreBadge value={post.uScore} type="u" />
                   <span className="text-[10px] text-cyan-500/70 font-mono mt-1">U-SCORE</span>
@@ -1474,7 +1522,14 @@ export default function QRateApp() {
   // Posting State
   const [postText, setPostText] = useState("");
 
-  const displayedPosts = posts.filter(p => p.qScore >= minQScore);
+  const displayedPosts = posts.filter(p => {
+    // Ads are always shown if they meet quality threshold (can't be filtered out)
+    if (p.isAd) {
+      return p.qScore >= AD_MIN_QSCORE;
+    }
+    // Regular posts respect the user's filter
+    return p.qScore >= minQScore;
+  });
 
   const handleRate = (id, newRating) => {
     setPosts(posts.map(post => {
