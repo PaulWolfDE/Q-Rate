@@ -97,6 +97,52 @@ const INITIAL_POSTS = [
     isAd: true,
     adDisclaimer: "Gesponsert von SolarTech Deutschland"
   },
+  // --- Image-only posts for demo ---
+  {
+    id: 12,
+    user: "AI_ArtFan",
+    handle: "@ai_art_2024",
+    avatar: "bg-pink-600",
+    content: "",
+    mediaType: "real-image",
+    mediaContent: "/ai-fake-image.png",
+    qScore: 23,
+    uScore: 35,
+    uScoreReason: "KI-generierter Inhalt erkannt",
+    ratingCount: 340,
+    likes: 89,
+    dislikes: 456,
+    commentsList: [
+      { id: 1, user: "FactChecker", handle: "@fact_check", avatar: "bg-red-500", content: "Das ist eindeutig KI-generiert. Schaut euch die Hände und Finger an!", timestamp: "15m", likes: 234 },
+      { id: 2, user: "AIExpert", handle: "@ai_expert", avatar: "bg-blue-500", content: "Typische Artefakte von Bildgeneratoren. Bitte als KI kennzeichnen.", timestamp: "10m", likes: 189 }
+    ],
+    isCurator: false,
+    timestamp: "25m",
+    category: "entertainment"
+  },
+  {
+    id: 13,
+    user: "NaturePhotographer",
+    handle: "@nature_lens",
+    avatar: "bg-teal-600",
+    content: "",
+    mediaType: "real-image",
+    mediaContent: "/nature-photo.png",
+    qScore: 97,
+    uScore: 92,
+    uScoreReason: "Du interagierst oft mit Natur-Fotografie",
+    ratingCount: 2150,
+    likes: 8900,
+    dislikes: 12,
+    commentsList: [
+      { id: 1, user: "PhotoEnthusiast", handle: "@photo_fan", avatar: "bg-indigo-500", content: "Absolut atemberaubend! 😍 Wo wurde das aufgenommen?", timestamp: "1h", likes: 567 },
+      { id: 2, user: "NaturePhotographer", handle: "@nature_lens", avatar: "bg-teal-600", content: "@photo_fan Achensee in Tirol, letzten Herbst bei Sonnenaufgang.", timestamp: "45m", likes: 234 },
+      { id: 3, user: "TravelBlogger", handle: "@travel_stories", avatar: "bg-orange-500", content: "Kommt direkt auf meine Bucket List! 🏔️", timestamp: "30m", likes: 123 }
+    ],
+    isCurator: true,
+    timestamp: "3h",
+    category: "entertainment"
+  },
   {
     id: 2,
     user: "NewsFlash DE",
@@ -564,6 +610,20 @@ const ScoreBadge = ({ value, type = "q", size = "md" }) => {
 
 const MediaPlaceholder = ({ type, content }) => {
   if (!type) return null;
+
+  // Real image - display actual image from content path
+  if (type === 'real-image') {
+    return (
+      <div className="mt-3 w-full rounded-xl overflow-hidden border border-gray-700">
+        <img
+          src={content}
+          alt="Post media"
+          className="w-full h-auto object-cover max-h-96"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="mt-3 w-full h-64 bg-gray-800 rounded-xl overflow-hidden relative flex items-center justify-center border border-gray-700 group cursor-pointer hover:border-gray-600 transition-colors">
       {type === 'image' ? (
