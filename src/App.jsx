@@ -71,6 +71,32 @@ const INITIAL_POSTS = [
     timestamp: "2h",
     category: "education"
   },
+  // --- Sponsored Ad Post (high-quality, Q-Score >= 80 required) ---
+  {
+    id: 11,
+    user: "SolarTech Deutschland",
+    handle: "@solartech_de",
+    avatar: "bg-amber-500",
+    content: "💡 Wusstet ihr? Moderne Balkonkraftwerke erzeugen bis zu 800 kWh pro Jahr – genug, um euren Kühlschrank, Router und Laptop komplett solar zu betreiben. Die durchschnittliche Amortisationszeit liegt bei nur 3-4 Jahren. Hier ist eine Übersicht der aktuellen Effizienzwerte verschiedener Panel-Typen.",
+    mediaType: "image",
+    mediaContent: "solar-efficiency-chart",
+    qScore: 86,
+    uScore: 0, // Not used for ads
+    uScoreReason: null,
+    ratingCount: 890,
+    likes: 2800,
+    dislikes: 45,
+    commentsList: [
+      { id: 1, user: "EcoEnthusiast", handle: "@eco_fan", avatar: "bg-green-500", content: "Super informativ! Habe mein Balkonkraftwerk letztes Jahr installiert und spare bereits 180€/Jahr.", timestamp: "2h", likes: 156 },
+      { id: 2, user: "TechSkeptiker", handle: "@tech_skeptic", avatar: "bg-gray-500", content: "Welche Panels werden hier genau verglichen?", timestamp: "1h", likes: 34 },
+      { id: 3, user: "SolarTech Deutschland", handle: "@solartech_de", avatar: "bg-amber-500", content: "@tech_skeptic Mono-, Poly- und Dünnschicht-Zellen. Link zur Studie im Bio!", timestamp: "45m", likes: 67 }
+    ],
+    isCurator: false,
+    timestamp: "Gesponsert",
+    category: "tech",
+    isAd: true,
+    adDisclaimer: "Gesponsert von SolarTech Deutschland"
+  },
   {
     id: 2,
     user: "NewsFlash DE",
@@ -266,32 +292,6 @@ const INITIAL_POSTS = [
     isCurator: false,
     timestamp: "4h",
     category: "entertainment"
-  },
-  // --- Sponsored Ad Post (high-quality, Q-Score >= 80 required) ---
-  {
-    id: 11,
-    user: "SolarTech Deutschland",
-    handle: "@solartech_de",
-    avatar: "bg-amber-500",
-    content: "💡 Wusstet ihr? Moderne Balkonkraftwerke erzeugen bis zu 800 kWh pro Jahr – genug, um euren Kühlschrank, Router und Laptop komplett solar zu betreiben. Die durchschnittliche Amortisationszeit liegt bei nur 3-4 Jahren. Hier ist eine Übersicht der aktuellen Effizienzwerte verschiedener Panel-Typen.",
-    mediaType: "image",
-    mediaContent: "solar-efficiency-chart",
-    qScore: 86,
-    uScore: 0, // Not used for ads
-    uScoreReason: null,
-    ratingCount: 890,
-    likes: 2800,
-    dislikes: 45,
-    commentsList: [
-      { id: 1, user: "EcoEnthusiast", handle: "@eco_fan", avatar: "bg-green-500", content: "Super informativ! Habe mein Balkonkraftwerk letztes Jahr installiert und spare bereits 180€/Jahr.", timestamp: "2h", likes: 156 },
-      { id: 2, user: "TechSkeptiker", handle: "@tech_skeptic", avatar: "bg-gray-500", content: "Welche Panels werden hier genau verglichen?", timestamp: "1h", likes: 34 },
-      { id: 3, user: "SolarTech Deutschland", handle: "@solartech_de", avatar: "bg-amber-500", content: "@tech_skeptic Mono-, Poly- und Dünnschicht-Zellen. Link zur Studie im Bio!", timestamp: "45m", likes: 67 }
-    ],
-    isCurator: true,
-    timestamp: "Gesponsert",
-    category: "tech",
-    isAd: true,
-    adDisclaimer: "Gesponsert von SolarTech Deutschland"
   }
 ];
 
