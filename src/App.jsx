@@ -100,25 +100,26 @@ const INITIAL_POSTS = [
   // --- Image-only posts for demo ---
   {
     id: 12,
-    user: "AI_ArtFan",
-    handle: "@ai_art_2024",
-    avatar: "bg-pink-600",
-    content: "",
+    user: "TruthSeeker99",
+    handle: "@wake_up_sheeple",
+    avatar: "bg-red-700",
+    content: "SIE wollen nicht, dass ihr das seht! 👁️ Teilt bevor es gelöscht wird!!!",
     mediaType: "real-image",
-    mediaContent: "/ai-fake-image.png",
-    qScore: 23,
-    uScore: 35,
-    uScoreReason: "KI-generierter Inhalt erkannt",
-    ratingCount: 340,
-    likes: 89,
-    dislikes: 456,
+    mediaContent: "/conspiracy-image.png",
+    qScore: 8,
+    uScore: 15,
+    uScoreReason: "Potenziell irreführender Inhalt",
+    ratingCount: 890,
+    likes: 234,
+    dislikes: 2340,
     commentsList: [
-      { id: 1, user: "FactChecker", handle: "@fact_check", avatar: "bg-red-500", content: "Das ist eindeutig KI-generiert. Schaut euch die Hände und Finger an!", timestamp: "15m", likes: 234 },
-      { id: 2, user: "AIExpert", handle: "@ai_expert", avatar: "bg-blue-500", content: "Typische Artefakte von Bildgeneratoren. Bitte als KI kennzeichnen.", timestamp: "10m", likes: 189 }
+      { id: 1, user: "FactChecker", handle: "@fact_check", avatar: "bg-blue-500", content: "Das wurde bereits mehrfach widerlegt. Bitte Quellen prüfen!", timestamp: "5m", likes: 567 },
+      { id: 2, user: "Wissenschaftler", handle: "@dr_science", avatar: "bg-emerald-500", content: "Diese Behauptungen haben keinerlei wissenschaftliche Grundlage.", timestamp: "3m", likes: 445 },
+      { id: 3, user: "Moderator", handle: "@q_mod", avatar: "bg-gray-700", content: "⚠️ Dieser Beitrag wurde als potenziell irreführend markiert.", timestamp: "1m", likes: 890 }
     ],
     isCurator: false,
-    timestamp: "25m",
-    category: "entertainment"
+    timestamp: "45m",
+    category: "news"
   },
   {
     id: 13,
